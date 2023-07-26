@@ -6,7 +6,3 @@ Console.WriteLine(MsConverter.ParseToTimeSpan("2h").ToString());            // 0
 Console.WriteLine(MsConverter.ToString(3600000));                           // 1h
 Console.WriteLine(MsConverter.ToString(3600000, new() { Long = true }));    // 1 hour
 Console.WriteLine(MsConverter.ToString(7200000, new() { Long = true }));    // 2 hours
-
-string x = "";
-string y = $"x{x}";
-Console.WriteLine(y.Length);
