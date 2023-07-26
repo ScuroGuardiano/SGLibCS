@@ -111,6 +111,8 @@ public class MsConverter_ParseShould
     [InlineData("xD")]
     [InlineData("ms")]
     [InlineData("10-.5")]
+    [InlineData("")]
+    [InlineData(null)]
     public void Parse_ThrowOnInvalid(string input)
     {
         Assert.ThrowsAny<Exception>(() => {

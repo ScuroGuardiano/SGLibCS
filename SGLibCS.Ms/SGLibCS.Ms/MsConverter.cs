@@ -7,6 +7,7 @@ public class MsConverter
 {
     public static double Parse(string input)
     {
+        ArgumentException.ThrowIfNullOrEmpty(input);
         if (input.Length > 100)
         {
             throw new ArgumentException("Value exceeds the maximum length of 100 characters.", nameof(input));
@@ -173,7 +174,7 @@ public class MsConverter
         }
         if (msAbs >= s)
         {
-            return Plural(ms, msAbs, s, "second ");
+            return Plural(ms, msAbs, s, "second");
         }
 
         return $"{ms} ms";
@@ -182,9 +183,8 @@ public class MsConverter
     private static string Plural(double ms, double msAbs, double n, string name)
     {
         var isPlural = msAbs >= n * 1.5;
-        var pluralLetter = isPlural ? "s" : "";
+        var pluralLetter = isPlural ? "s" : String.Empty;
         return $"{Math.Round(ms / n)} {name}{pluralLetter}";
-        // return `${Math.round(ms / n)} ${name}${isPlural ? 's' : ''}` as StringValue;
     }
 
     private static double s { get => 1000; }

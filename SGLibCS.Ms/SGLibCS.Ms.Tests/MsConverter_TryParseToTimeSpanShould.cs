@@ -1,6 +1,6 @@
 namespace SGLibCS.Ms.Tests;
 
-public class MsConverter_TryParseShould
+public class MsConverter_TryParseToTimeSpanShould
 {
     [Theory]
     [InlineData("1 YeARs")]
@@ -35,10 +35,10 @@ public class MsConverter_TryParseShould
     [InlineData("1 Msec")]
     [InlineData("1 Ms")]
     
-    public void TryParse_ReturnsTrueOnValidData(string input)
+    public void TryParseToTimeSpan_ReturnsTrueOnValidData(string input)
     {
-        double result;
-        Assert.True(MsConverter.TryParse(input, out result));
+        TimeSpan result;
+        Assert.True(MsConverter.TryParseToTimespan(input, out result));
     }
 
     [Theory]
@@ -73,20 +73,20 @@ public class MsConverter_TryParseShould
     [InlineData("1 Msecs")]
     [InlineData("1 Msec")]
     [InlineData("1 Ms")]
-    public void TryParse_ResultTheSameAsParse(string input)
+    public void TryParseToTimeSpan_ResultTheSameAsParseToTimeSpan(string input)
     {
-        double result;
-        MsConverter.TryParse(input, out result);
-        Assert.Equal(MsConverter.Parse(input), result);
+        TimeSpan result;
+        MsConverter.TryParseToTimespan(input, out result);
+        Assert.Equal(MsConverter.ParseToTimeSpan(input), result);
     }
 
     [Theory]
     [InlineData("xD")]
     [InlineData("ms")]
     [InlineData("10-.5")]
-    public void TryParse_ReturnsFalseOnInvalidData(string input)
+    public void TryParseToTimeSpan_ReturnsFalseOnInvalidData(string input)
     {
-        double result;
-        Assert.False(MsConverter.TryParse(input, out result));
+        TimeSpan result;
+        Assert.False(MsConverter.TryParseToTimespan(input, out result));
     }
 }
