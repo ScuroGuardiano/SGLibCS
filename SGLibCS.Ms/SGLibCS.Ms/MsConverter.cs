@@ -7,7 +7,10 @@ public class MsConverter
 {
     public static double Parse(string input)
     {
-        ArgumentException.ThrowIfNullOrEmpty(input);
+        if (input is null || input == String.Empty)
+        {
+            throw new ArgumentException("Input cannot be null or empty.", nameof(input));
+        }
         if (input.Length > 100)
         {
             throw new ArgumentException("Value exceeds the maximum length of 100 characters.", nameof(input));

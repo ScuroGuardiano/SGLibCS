@@ -1,7 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageId>SGLibCS.Ms</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>ScuroGuardiano</Authors>
+    <Copyright>Copyright (c) ScuroGuardiano 2023</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>TimeSpan;Duration;TimeSpan Conversion;Duration parser; TimeSpan parser</PackageTags>
+    <PackageProjectUrl>https://github.com/ScuroGuardiano/SGLibCS/tree/master/SGLibCS.Ms</PackageProjectUrl>
+    <Description>
+      Use this package to easily convert various time formats to milliseconds.
+      Port of vercel/ms.
+
+      For full documentation visit: https://github.com/ScuroGuardiano/SGLibCS/tree/master/SGLibCS.Ms
+    </Description>
+    <RepositoryUrl>https://github.com/ScuroGuardiano/SGLibCS</RepositoryUrl> 
+    <RepositoryType>git</RepositoryType> 
+    <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
