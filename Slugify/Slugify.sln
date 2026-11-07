@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScuroGuardiano.Slugify", "ScuroGuardiano.Slugify\ScuroGuardiano.Slugify.csproj", "{C9709BC2-8BD8-4CF8-A8D3-8AE8FE1A288E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScuroGuardiano.Slugify.Benchmarks", "ScuroGuardiano.Slugify.Benchmarks\ScuroGuardiano.Slugify.Benchmarks.csproj", "{AF7F2D95-ACDA-4A78-9879-184E4F9B2CC2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScuroGuardiano.Slugify.Tests", "ScuroGuardiano.Slugify.Tests\ScuroGuardiano.Slugify.Tests.csproj", "{B457C2C2-7036-42CD-B6CB-83F518ACD67D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C9709BC2-8BD8-4CF8-A8D3-8AE8FE1A288E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9709BC2-8BD8-4CF8-A8D3-8AE8FE1A288E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9709BC2-8BD8-4CF8-A8D3-8AE8FE1A288E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9709BC2-8BD8-4CF8-A8D3-8AE8FE1A288E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF7F2D95-ACDA-4A78-9879-184E4F9B2CC2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF7F2D95-ACDA-4A78-9879-184E4F9B2CC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF7F2D95-ACDA-4A78-9879-184E4F9B2CC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF7F2D95-ACDA-4A78-9879-184E4F9B2CC2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B457C2C2-7036-42CD-B6CB-83F518ACD67D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B457C2C2-7036-42CD-B6CB-83F518ACD67D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B457C2C2-7036-42CD-B6CB-83F518ACD67D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B457C2C2-7036-42CD-B6CB-83F518ACD67D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
