@@ -9,8 +9,8 @@
         <Authors>ScuroGuardiano</Authors>
         <Description>Package for converting arbitrary text to url friendly slug</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <RepositoryUrl>https://github.com/ScuroGuardiano/</RepositoryUrl>
-        <PackageProjectUrl>https://github.com/ScuroGuardiano/SGLibCS</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/ScuroGuardiano/SGLibCS/tree/master/Slugify</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/ScuroGuardiano/SGLibCS/tree/master/Slugify</PackageProjectUrl>
 
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageTags>slug;slugify</PackageTags>
