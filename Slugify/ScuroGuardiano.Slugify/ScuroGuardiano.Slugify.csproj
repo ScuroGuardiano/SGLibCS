@@ -10,10 +10,10 @@
         <Description>Package for converting arbitrary text to url friendly slug</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/ScuroGuardiano/</RepositoryUrl>
-        <PackageProjectUrl>https://github.com/ScuroGuardiano/Phoenix</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/ScuroGuardiano/SGLibCS</PackageProjectUrl>
 
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageTags>execve;linux;unix;process;native</PackageTags>
+        <PackageTags>slug;slugify</PackageTags>
 
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
