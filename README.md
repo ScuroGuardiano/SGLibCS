@@ -1,8 +1,11 @@
 # SGLibCS - Various Libraries for .NET
 
-It's set of my libraries or libraries ported from other languages by me for .NET.
+Set of my libraries or libraries ported from other languages by me for .NET.
 
-Documentation for each library is in it's README file :)
+Documentation and license for each library are in their respective directories.
+
+> [!NOTE]
+> `SGLibCS` namespace is obsolete, all my libraries use `ScuroGuardiano` namespace.
 
 ## Ported libraries
 | name             | original       | original lang | original author  |
@@ -13,10 +16,8 @@ Documentation for each library is in it's README file :)
 [Ms]: SGLibCS.Ms/README.md
 [VercelMs]: https://github.com/vercel/ms
 
-## Contributing
-Found bug? Have an idea? Clone this repo and make pull request!  
-You can use SGLibCS.Playground project for development testing, just don't commit it!  
-Remember to write unit tests for new features! UwU
+## My Libraries
+- [ScuroGuardiano.Slugify](Slugify) - library for creating slugs.
 
 ## License
-If not specified otherwise everything is licenced under MIT License.
+Each library has it's license file in it's respective directory.
