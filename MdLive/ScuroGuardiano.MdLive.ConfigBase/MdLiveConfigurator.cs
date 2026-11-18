@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Text;
+using ColorCode.Styling;
 using Markdig;
 using Markdig.Renderers.Html;
 using Markdig.Syntax;
@@ -34,6 +35,17 @@ public class MdLiveConfigurator
         </html>
         """;
 
+    /// <summary>
+    /// <para>
+    /// Color scheme used for syntax highlighting of code blocks, by default <see cref="StyleDictionary.DefaultLight"/>.
+    /// </para>
+    /// <para>
+    /// It's used both by the Markdown pipeline (to emit CSS classes) and by <see cref="ProvideStyles"/>
+    /// (to emit the stylesheet for those classes), so override this instead of changing just one of them.
+    /// </para>
+    /// </summary>
+    protected virtual StyleDictionary CodeStyleDictionary => StyleDictionary.DefaultLight;
+
     public MdLiveConfigurator(ILogger<MdLiveConfigurator> logger)
     {
         Logger = logger;
@@ -54,7 +66,7 @@ public class MdLiveConfigurator
             new MarkdownPipelineBuilder()
                 .UseAdvancedExtensions()
                 .UseYamlFrontMatter()
-                .UseColorCode(HtmlFormatterType.Css)
+                .UseColorCode(HtmlFormatterType.Css, CodeStyleDictionary)
                 .Build()
         );
     }
@@ -116,7 +128,10 @@ public class MdLiveConfigurator
     /// Returns HTML fragment with styles, by default trying to read from <c>.mdlive/style.css</c>,
     /// wrapping it in style tag or <c>.mdlive/styles.html</c>. If both are present, both will be added.
     /// <c>styles.html</c> will be added first, so rules from <c>style.css</c> can override third party styles.
-    /// Fallbacks to no styles.
+    /// </para>
+    /// <para>
+    /// Stylesheet for syntax highlighting (see <see cref="CodeStyleDictionary"/>) is always added before
+    /// user styles, so both <c>styles.html</c> and <c>style.css</c> can override it.
     /// </para>
     /// <para>
     /// When overriding this method remember that you must wrap any CSS in style tag
@@ -136,6 +151,10 @@ public class MdLiveConfigurator
 
         StringBuilder sb = new();
 
+        sb.Append("<style>");
+        sb.Append(GetCodeHighlightCss(CodeStyleDictionary));
+        sb.Append("</style>");
+
         if (stylesHtml is not null)
         {
             sb.Append(stylesHtml);
@@ -150,6 +169,64 @@ public class MdLiveConfigurator
 
         return sb.ToString();
     }
+
+    /// <summary>
+    /// <para>
+    /// Generates CSS for classes emitted by ColorCode with <see cref="HtmlFormatterType.Css"/>.
+    /// </para>
+    /// <para>
+    /// ColorCode's own <c>HtmlClassFormatter.GetCSSString()</c> isn't used, because it also sets
+    /// background of the whole <c>body</c> and writes token backgrounds as <c>color</c>.
+    /// </para>
+    /// </summary>
+    /// <param name="styles">Color scheme to generate CSS for</param>
+    /// <returns>CSS without enclosing style tag</returns>
+    protected static string GetCodeHighlightCss(StyleDictionary styles)
+    {
+        var sb = new StringBuilder();
+
+        foreach (var style in styles)
+        {
+            if (string.IsNullOrWhiteSpace(style.ReferenceName))
+            {
+                continue;
+            }
+
+            // ColorCode używa ogólnych nazw klas (bold, comment, string...),
+            // więc zawężamy je do bloków kodu, żeby nie gryzły się ze stylami dokumentu
+            sb.Append("pre .").Append(style.ReferenceName).Append('{');
+
+            if (!string.IsNullOrWhiteSpace(style.Foreground))
+            {
+                sb.Append("color:").Append(ToCssColor(style.Foreground)).Append(';');
+            }
+
+            if (!string.IsNullOrWhiteSpace(style.Background))
+            {
+                sb.Append("background-color:").Append(ToCssColor(style.Background)).Append(';');
+            }
+
+            if (style.Italic)
+            {
+                sb.Append("font-style:italic;");
+            }
+
+            if (style.Bold)
+            {
+                sb.Append("font-weight:bold;");
+            }
+
+            sb.Append('}');
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// ColorCode stores colors as <c>#AARRGGBB</c>, CSS expects <c>#RRGGBB</c>
+    /// </summary>
+    private static string ToCssColor(string color) =>
+        color.Length >= 6 ? "#" + color[^6..] : color;
 
 
     /// <summary>
