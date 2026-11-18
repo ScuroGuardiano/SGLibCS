@@ -55,8 +55,10 @@ internal sealed class StdinListener : BackgroundService
             {
                 message = JsonSerializer.Deserialize<EditorMessage>(line, JsonOptions);
             }
-            catch (JsonException ex)
+            catch (Exception ex) when (ex is JsonException or NotSupportedException)
             {
+                // Nieobsłużony wyjątek w ExecuteAsync zatrzymałby cały host,
+                // a brakujący lub nieznany "type" przy abstrakcyjnej bazie może dać NotSupportedException
                 _logger.LogWarning(ex, "Malformed message from editor");
                 continue;
             }
