@@ -21,7 +21,7 @@ public class MdLiveConfigurator
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <%style%>
+            <%styles%>
             <title><%title%></title>
         </head>
         <body>
@@ -29,7 +29,7 @@ public class MdLiveConfigurator
                 <%content%>
             </main>
             
-            <%script%>
+            <%scripts%>
         </body>
         </html>
         """;
@@ -52,9 +52,9 @@ public class MdLiveConfigurator
     {
         return Task.FromResult(
             new MarkdownPipelineBuilder()
+                .UseAdvancedExtensions()
                 .UseYamlFrontMatter()
                 .UseColorCode(HtmlFormatterType.Css)
-                .UseAdvancedExtensions()
                 .Build()
         );
     }
@@ -92,7 +92,7 @@ public class MdLiveConfigurator
     /// and transform it at your will.
     /// </para>
     /// <para>
-    /// Use <c>&lt;%style%&gt;</c>, <c>&lt;%content%&gt;</c>, <c>&lt;%title%&gt;</c> and <c>&lt;%script%&gt;</c>
+    /// Use <c>&lt;%styles%&gt;</c>, <c>&lt;%content%&gt;</c>, <c>&lt;%title%&gt;</c> and <c>&lt;%scripts%&gt;</c>
     /// in your template, MdLive will substitute those values.
     /// </para>
     /// </summary>

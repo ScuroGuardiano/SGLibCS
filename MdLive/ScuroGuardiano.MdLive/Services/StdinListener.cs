@@ -5,12 +5,24 @@ using ScuroGuardiano.MdLive.Model;
 
 namespace ScuroGuardiano.MdLive.Services;
 
-internal sealed class StdinListener(
-    Channel<DocumentContent> contentChannel,
-    PreviewHub hub,
-    IHostApplicationLifetime lifetime,
-    ILogger<StdinListener> logger) : BackgroundService
+internal sealed class StdinListener : BackgroundService
 {
+    private readonly Channel<DocumentContent> _contentChannel;
+    private readonly PreviewHub _hub;
+    private readonly IHostApplicationLifetime _lifetime;
+    private readonly ILogger<StdinListener> _logger;
+
+    public StdinListener(DocumentContentChannel contentChannel,
+        PreviewHub hub,
+        IHostApplicationLifetime lifetime,
+        ILogger<StdinListener> logger)
+    {
+        _contentChannel = contentChannel.Channel;
+        _hub = hub;
+        _lifetime = lifetime;
+        _logger = logger;
+    }
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -23,8 +35,8 @@ internal sealed class StdinListener(
 
             if (line is null)
             {
-                logger.LogInformation("Stdin closed, shutting down");
-                lifetime.StopApplication();
+                _logger.LogInformation("Stdin closed, shutting down");
+                _lifetime.StopApplication();
                 return;
             }
 
@@ -40,25 +52,22 @@ internal sealed class StdinListener(
             }
             catch (JsonException ex)
             {
-                logger.LogWarning(ex, "Malformed message from editor");
+                _logger.LogWarning(ex, "Malformed message from editor");
                 continue;
             }
 
             switch (message)
             {
-                case { Type: "content", Path: { } path, Text: { } text }:
+                case EditorMessage.Content content:
                     // DropOldest, więc TryWrite zawsze się powiedzie
-                    contentChannel.Writer.TryWrite(new DocumentContent(path, text));
+                    _contentChannel.Writer.TryWrite(new DocumentContent(content.Path, content.Text));
                     break;
 
-                case { Type: "cursor", Line: { } cursorLine }:
-                    hub.PublishCursor(cursorLine);
-                    break;
-
-                default:
-                    logger.LogWarning("Unknown message type: {Type}", message?.Type);
+                case EditorMessage.Cursor cursor:
+                    _hub.PublishCursor(cursor.Line);
                     break;
             }
         }
     }
+
 }
