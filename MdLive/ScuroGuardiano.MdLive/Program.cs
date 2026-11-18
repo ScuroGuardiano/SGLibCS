@@ -19,8 +19,6 @@ builder.Services.Configure<HostOptions>(options =>
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
-
 app.MapGet("/", () =>
 {
     // language=html
