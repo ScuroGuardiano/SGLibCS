@@ -23,7 +23,12 @@ internal sealed class StdinListener : BackgroundService
         _logger = logger;
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        // vim.json.encode nie gwarantuje kolejności kluczy, a dyskryminator "type"
+        // domyślnie musi być pierwszą właściwością obiektu
+        AllowOutOfOrderMetadataProperties = true
+    };
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
