@@ -23,7 +23,12 @@ internal sealed class StdinListener : BackgroundService
         _logger = logger;
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        // vim.json.encode nie gwarantuje kolejności kluczy, a dyskryminator "type"
+        // domyślnie musi być pierwszą właściwością obiektu
+        AllowOutOfOrderMetadataProperties = true
+    };
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -50,8 +55,10 @@ internal sealed class StdinListener : BackgroundService
             {
                 message = JsonSerializer.Deserialize<EditorMessage>(line, JsonOptions);
             }
-            catch (JsonException ex)
+            catch (Exception ex) when (ex is JsonException or NotSupportedException)
             {
+                // Nieobsłużony wyjątek w ExecuteAsync zatrzymałby cały host,
+                // a brakujący lub nieznany "type" przy abstrakcyjnej bazie może dać NotSupportedException
                 _logger.LogWarning(ex, "Malformed message from editor");
                 continue;
             }
