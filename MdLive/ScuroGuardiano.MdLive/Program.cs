@@ -7,8 +7,8 @@ using StarFederation.Datastar.DependencyInjection;
 
 switch (args)
 {
-    case ["init", ..]:
-        return await InitCommand.RunAsync();
+    case ["init", .. var initArgs]:
+        return await InitCommand.RunAsync(initArgs);
 
     case ["serve", ..]:
         break;
@@ -142,7 +142,8 @@ static void PrintUsage(TextWriter writer)
 
         Commands:
           init     Create .mdlive in the current directory with default style.css and template.html.
-                   Existing files are left untouched.
+                   Fails if .mdlive already exists and isn't empty.
+                   --force, -f  Overwrite the default files, other files in .mdlive are kept.
           serve    Start the preview server on a random port on 127.0.0.1 and print the port to stdout.
                    Reads editor messages from stdin, exits when stdin is closed.
           help     Show this message.
