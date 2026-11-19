@@ -60,7 +60,7 @@ app.MapGet("/", () =>
           <script id="__noszkurwa" data-ignore-morph src="/scripts/mdlive.js"></script>
         </head>
         <body>
-          <div id="__japierdole" data-ignore-morph style="display: none;" data-on:load__window="@get('/preview/sse')"></div>
+          <div id="__japierdole" data-ignore-morph style="display: none;" data-init="@get('/preview/sse')"></div>
 
           <main id="app">
             <h1>Waiting for document data...</h1>
