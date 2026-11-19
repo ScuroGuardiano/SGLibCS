@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HostFiltering;
 using ScuroGuardiano.MdLive.ConfigBase;
 using ScuroGuardiano.MdLive.Services;
 using StarFederation.Datastar.DependencyInjection;
@@ -17,7 +18,27 @@ builder.Services.Configure<HostOptions>(options =>
     options.ShutdownTimeout = TimeSpan.FromSeconds(0);
 });
 
+// Domyślnie tylko loopback, nadpisywalne przez AllowedHosts z konfiguracji (env, --AllowedHosts=..., appsettings).
+// Bez tego framework przy braku wartości w konfiguracji wstawia "*", a appsettings.json jest czytany
+// z bieżącego katalogu, więc w dotnet toolu zwykle go nie ma albo jest cudzy.
+// Configure wykonuje się przed frameworkowym PostConfigure, który niepustej listy już nie rusza.
+string[] defaultAllowedHosts = ["localhost", "127.0.0.1", "[::1]"];
+var configuredAllowedHosts = builder.Configuration["AllowedHosts"]
+    ?.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+var allowedHosts = configuredAllowedHosts is { Length: > 0 } ? configuredAllowedHosts : defaultAllowedHosts;
+
+builder.Services.Configure<HostFilteringOptions>(options =>
+{
+    options.AllowedHosts = allowedHosts;
+});
+
 var app = builder.Build();
+
+if (allowedHosts.Contains("*"))
+{
+    app.Logger.LogWarning("AllowedHosts contains '*', Host header filtering is disabled. " +
+                          "Any website can reach the preview server through DNS rebinding");
+}
 
 app.MapGet("/", () =>
 {
