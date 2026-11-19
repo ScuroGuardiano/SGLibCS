@@ -6,6 +6,9 @@ using StarFederation.Datastar.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// stdout należy do protokołu z edytorem, więc wszystkie logi idą na stderr
+builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
+
 builder.Services.AddDatastar();
 builder.Services.AddSingleton<DocumentContentChannel>();
 
