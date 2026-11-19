@@ -80,7 +80,7 @@ so the stylesheet doesn't depend on which theme the pipeline was created with.
 The color columns show ColorCode's built-in `StyleDictionary.DefaultLight` and `StyleDictionary.DefaultDark`
 as a starting point; `–` means the theme doesn't style that class.
 
-| Klasa | Zakres ColorCode | DefaultLight | DefaultDark |
+| CSS Class | ColorCode token | DefaultLight | DefaultDark |
 |---|---|---|---|
 | `.plainText` | Plain Text | `#000000`, tło `#FFFFFF` | `#DADADA`, tło `#1E1E1E` |
 | `.htmlServerSideScript` | HTML Server-Side Script | tło `#FFFF00` | tło `#FFFF00` |
