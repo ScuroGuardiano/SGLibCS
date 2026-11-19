@@ -24,35 +24,38 @@ internal static class MdLiveScripts
         """
         window.mdlive = {
             scrollTo(targetLine) {
-                // find element closest to a line
-                const elements = document.querySelectorAll('[data-line]');
-                if (elements.length === 0) {
+                // Blok, w którym stoi kursor: największy data-line <= linia kursora.
+                // Przy równych liniach (lista, jej element, akapit w nim) wygrywa ostatni,
+                // czyli najbardziej zagnieżdżony, bo querySelectorAll zwraca elementy w kolejności dokumentu.
+                let target = null;
+                let targetBlockLine = -Infinity;
+
+                for (const el of document.querySelectorAll('[data-line]')) {
+                    const line = parseInt(el.dataset.line, 10);
+                    if (Number.isFinite(line) && line <= targetLine && line >= targetBlockLine) {
+                        target = el;
+                        targetBlockLine = line;
+                    }
+                }
+
+                const viewport = window.innerHeight;
+                let top = 0;
+
+                if (target) {
+                    const rect = target.getBoundingClientRect();
+                    // Krótki blok ląduje na środku ekranu, długi (np. duży blok kodu) początkiem nad środkiem
+                    top = window.scrollY + rect.top + Math.min(rect.height, viewport / 2) / 2 - viewport / 2;
+                }
+
+                const distance = Math.abs(top - window.scrollY);
+
+                // Mały ruch kursora w obrębie tego samego fragmentu nie szarpie podglądem
+                if (distance < viewport / 8) {
                     return;
                 }
-                
-                let closestElement = null;
-                let minDifference = Infinity;
-                
-                elements.forEach(el => {
-                   const lineValue = parseInt(el.getAttribute('data-line'), 10);
-                   if (!isFinite(lineValue)) {
-                       return;
-                   }
-                   
-                   const difference = Math.abs(lineValue - targetLine);
-                   
-                   if (difference < minDifference) {
-                       minDifference = difference;
-                       closestElement = el;
-                   }
-                });
-                
-                if (closestElement) {
-                    closestElement.scrollTo({
-                        behavior: "smooth",
-                        block: "center"
-                    });
-                }
+
+                // Płynnie tylko krótkie skoki; długie (gg, G, :300) od razu, żeby animacje się nie nakładały
+                window.scrollTo({ top, behavior: distance < viewport ? "smooth" : "instant" });
             }
         };
         """;
