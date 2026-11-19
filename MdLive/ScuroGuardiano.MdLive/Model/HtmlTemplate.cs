@@ -74,7 +74,7 @@ internal sealed class HtmlTemplate
         const string mdLiveSseListener =
             """
             <body>
-              <div id="__japierdole" data-ignore-morph style="display: none;" data-on:load__window="@get('/preview/sse')"></div>
+              <div id="__japierdole" data-ignore-morph style="display: none;" data-init="@get('/preview/sse')"></div>
             """;
 
         template = template
