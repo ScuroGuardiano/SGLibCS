@@ -62,25 +62,41 @@ internal sealed class HtmlTemplate
     private static string InjectMdLiveElements(string template)
     {
         // language=html
-        const string mdLiveScripts =
+        const string headElements =
             """
-
               <script id="__jajebie" data-ignore-morph type="module" src="/scripts/datastar.js"></script>
               <script id="__noszkurwa" data-ignore-morph src="/scripts/mdlive.js"></script>
-            </head>
+              <style id="__mdlive-style" data-ignore-morph>
+                /* Odstęp na dole, żeby ostatnie bloki też dało się przewinąć na środek ekranu */
+                body::after { content: ""; display: block; height: 50vh; }
+              </style>
+
             """;
 
         // language=html
-        const string mdLiveSseListener =
+        const string bodyElements =
             """
-            <body>
               <div id="__japierdole" data-ignore-morph style="display: none;" data-init="@get('/preview/sse')"></div>
+
             """;
 
-        template = template
-            .Replace("</head>", mdLiveScripts)
-            .Replace("<body>", mdLiveSseListener);
+        template = InsertBefore(template, "</head>", headElements, lastOccurrence: false);
+        template = InsertBefore(template, "</body>", bodyElements, lastOccurrence: true);
 
         return template;
+    }
+
+    /// <summary>
+    /// Inserts content before a closing tag. Closing tags have no attributes, so unlike <c>&lt;body&gt;</c>
+    /// they match regardless of how the user's template opens the element.
+    /// </summary>
+    private static string InsertBefore(string template, string closingTag, string content, bool lastOccurrence)
+    {
+        var index = lastOccurrence
+            ? template.LastIndexOf(closingTag, StringComparison.OrdinalIgnoreCase)
+            : template.IndexOf(closingTag, StringComparison.OrdinalIgnoreCase);
+
+        // Szablon bez tego tagu: przeglądarka i tak przyjmie elementy na końcu dokumentu
+        return index < 0 ? template + content : template.Insert(index, content);
     }
 }
