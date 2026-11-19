@@ -13,7 +13,10 @@ public class MdLiveConfigurator
 {
     protected ILogger Logger { get; private init; }
 
-    protected static string DefaultHtmlTemplate =>
+    /// <summary>
+    /// Template used when <c>.mdlive/template.html</c> doesn't exist, also written by <c>mdlive init</c>.
+    /// </summary>
+    public static string DefaultHtmlTemplate =>
         // language=html
         """
         <!DOCTYPE html>
