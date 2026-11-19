@@ -1,10 +1,33 @@
 using Microsoft.AspNetCore.HostFiltering;
 using Microsoft.Extensions.Options;
+using ScuroGuardiano.MdLive.Commands;
 using ScuroGuardiano.MdLive.ConfigBase;
 using ScuroGuardiano.MdLive.Services;
 using StarFederation.Datastar.DependencyInjection;
 
-var builder = WebApplication.CreateBuilder(args);
+switch (args)
+{
+    case ["init", .. var initArgs]:
+        return await InitCommand.RunAsync(initArgs);
+
+    case ["serve", ..]:
+        break;
+
+    case ["help" or "--help" or "-h", ..]:
+        PrintUsage(Console.Out);
+        return 0;
+
+    default:
+        PrintUsage(Console.Error);
+        return 1;
+}
+
+// Wszystko poniżej to "mdlive serve". Reszta argumentów idzie do konfiguracji, np. --AllowedHosts=...
+var builder = WebApplication.CreateBuilder(args[1..]);
+
+// Tylko loopback i losowy wolny port. Celowo nie do nadpisania z konfiguracji: wystawienie podglądu
+// poza localhost wyłączyłoby całą ochronę opartą na tym, że serwer jest osiągalny tylko lokalnie.
+builder.WebHost.UseUrls("http://127.0.0.1:0");
 
 // stdout należy do protokołu z edytorem, więc wszystkie logi idą na stderr
 builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
@@ -101,4 +124,28 @@ app.MapGet("/preview/sse", async (PreviewHub hub, IDatastarService datastarServi
 app.MapGet("/scripts/datastar.js", () => Results.Content(MdLiveScripts.DatastarJs, "text/javascript"));
 app.MapGet("/scripts/mdlive.js", () => Results.Content(MdLiveScripts.MdLiveJs, "text/javascript"));
 
-app.Run();
+await app.StartAsync();
+
+// Port znany jest dopiero po starcie. Pierwsza (i jedyna) linia na stdout, edytor ją czyta;
+// logi idą na stderr, więc nic innego tu nie trafi.
+var port = new Uri(app.Urls.First()).Port;
+await Console.Out.WriteLineAsync(port.ToString());
+await Console.Out.FlushAsync();
+
+await app.WaitForShutdownAsync();
+return 0;
+
+static void PrintUsage(TextWriter writer)
+{
+    writer.WriteLine("""
+        Usage: mdlive <command>
+
+        Commands:
+          init     Create .mdlive in the current directory with default style.css and template.html.
+                   Fails if .mdlive already exists and isn't empty.
+                   --force, -f  Overwrite the default files, other files in .mdlive are kept.
+          serve    Start the preview server on a random port on 127.0.0.1 and print the port to stdout.
+                   Reads editor messages from stdin, exits when stdin is closed.
+          help     Show this message.
+        """);
+}
