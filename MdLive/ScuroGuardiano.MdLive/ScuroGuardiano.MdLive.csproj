@@ -4,6 +4,13 @@
         <TargetFramework>net11.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+
+        <!-- Web SDK domyślnie wyłącza pakowanie -->
+        <IsPackable>true</IsPackable>
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>mdlive</ToolCommandName>
+        <PackageId>ScuroGuardiano.MdLive</PackageId>
+        <Version>0.1.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
