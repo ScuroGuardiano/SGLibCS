@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.HostFiltering;
+using Microsoft.Extensions.Options;
 using ScuroGuardiano.MdLive.ConfigBase;
 using ScuroGuardiano.MdLive.Services;
 using StarFederation.Datastar.DependencyInjection;
@@ -17,7 +19,29 @@ builder.Services.Configure<HostOptions>(options =>
     options.ShutdownTimeout = TimeSpan.FromSeconds(0);
 });
 
+// Domyślnie tylko loopback, nadpisywalne przez AllowedHosts z konfiguracji (env, --AllowedHosts=..., appsettings).
+// appsettings.json jest czytany z bieżącego katalogu, więc w dotnet toolu zwykle go nie ma albo jest cudzy.
+// Frameworkowe PostConfigure (zarejestrowane w CreateBuilder, więc wykonuje się przed naszym) przy pustym
+// AllowedHosts w konfiguracji wstawia "*". Po samych opcjach nie da się odróżnić tego od jawnego "*",
+// dlatego sprawdzamy konfigurację, a nie listę.
+string[] defaultAllowedHosts = ["localhost", "127.0.0.1", "[::1]"];
+
+builder.Services.AddOptions<HostFilteringOptions>()
+    .PostConfigure<IConfiguration>((options, configuration) =>
+    {
+        if (string.IsNullOrWhiteSpace(configuration["AllowedHosts"]))
+        {
+            options.AllowedHosts = defaultAllowedHosts;
+        }
+    });
+
 var app = builder.Build();
+
+if (app.Services.GetRequiredService<IOptions<HostFilteringOptions>>().Value.AllowedHosts.Contains("*"))
+{
+    app.Logger.LogWarning("AllowedHosts contains '*', Host header filtering is disabled. " +
+                          "Any website can reach the preview server through DNS rebinding");
+}
 
 app.MapGet("/", () =>
 {
