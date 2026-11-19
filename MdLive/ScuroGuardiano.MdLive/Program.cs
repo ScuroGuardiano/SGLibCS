@@ -123,6 +123,7 @@ app.MapGet("/preview/sse", async (PreviewHub hub, IDatastarService datastarServi
 
 app.MapGet("/scripts/datastar.js", () => Results.Content(MdLiveScripts.DatastarJs, "text/javascript"));
 app.MapGet("/scripts/mdlive.js", () => Results.Content(MdLiveScripts.MdLiveJs, "text/javascript"));
+app.MapDocumentFiles();
 
 await app.StartAsync();
 
