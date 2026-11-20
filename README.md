@@ -14,17 +14,22 @@ Markdig pipeline and `.mdlive` styles produce. Requires Neovim 0.10+.
 
    Make sure `~/.dotnet/tools` is in your `PATH`.
 
-2. Add the plugin. It lives in a subdirectory of this repository, so point your plugin manager
-   at a local checkout, e.g. with [lazy.nvim](https://github.com/folke/lazy.nvim):
+2. Add the plugin. The `mdlive/nvim` branch of this repository contains only the plugin at its
+   root, so plugin managers can use it directly, e.g. [lazy.nvim](https://github.com/folke/lazy.nvim):
 
    ```lua
    {
-     dir = "~/src/SGLibCS/MdLive/nvim",
+     "ScuroGuardiano/SGLibCS",
+     branch = "mdlive/nvim",
+     name = "mdlive",
      ft = "markdown",
      cmd = { "MdLiveStart", "MdLiveStop", "MdLiveOpen", "MdLiveLog" },
      opts = {},
    }
    ```
+
+   When working on the plugin itself, point lazy.nvim at the checkout instead:
+   `dir = "~/src/SGLibCS/MdLive/nvim"` in place of the repository and `branch`.
 
    Without a plugin manager: `vim.opt.rtp:append("~/src/SGLibCS/MdLive/nvim")` and
    `require("mdlive").setup()`.
@@ -73,3 +78,16 @@ The plugin talks to `mdlive serve` over stdio:
   - `{"type":"content","path":"/abs/file.md","text":"..."}`, the whole buffer,
   - `{"type":"cursor","line":42}`, 1-based cursor line, used for scroll sync.
 - Closing stdin stops the server. Logs go to stderr.
+
+## Publishing the plugin branch
+
+`MdLive/nvim` on `master` is the source of truth, the `mdlive/nvim` branch is generated from it
+with `git subtree split`, which keeps the directory's history and moves it to the root.
+The split is deterministic, so republishing after changes is a fast-forward:
+
+```sh
+git subtree split --prefix=MdLive/nvim -b mdlive/nvim master
+git push origin mdlive/nvim
+```
+
+Don't commit to `mdlive/nvim` directly, the next split would not contain those commits.
