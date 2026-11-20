@@ -1,0 +1,104 @@
+# Publishes a single NuGet package when a GitHub release is published.
+#
+# Release tag format: <PackageId>/v<version>, e.g. ScuroGuardiano.MdLive/v0.2.0
+# Only the package named in the tag is built and pushed, and only if it's listed in the
+# "Resolve package" step below. A release of anything else is ignored.
+#
+# Authentication uses nuget.org Trusted Publishing (OIDC), there's no long-lived API key:
+# https://learn.microsoft.com/nuget/nuget-org/trusted-publishing
+# Setup, once:
+#   1. nuget.org → Trusted Publishing: add a policy for this repository and workflow file
+#      (nuget-publish.yml).
+#   2. Repository → Settings → Secrets and variables → Actions → Variables:
+#      NUGET_USER = your nuget.org username.
+name: Publish NuGet package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for the OIDC token exchanged by NuGet/login
+      id-token: write
+    steps:
+      - name: Resolve package from release tag
+        id: package
+        env:
+          # Passed through env, not interpolated into the script, so a crafted tag can't inject commands
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^([A-Za-z0-9.]+)/v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)$ ]]; then
+            echo "::notice::Release tag '$TAG' is not '<PackageId>/v<version>', nothing to publish"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          package="${BASH_REMATCH[1]}"
+          version="${BASH_REMATCH[2]}"
+
+          case "$package" in
+            ScuroGuardiano.MdLive) project="MdLive/ScuroGuardiano.MdLive/ScuroGuardiano.MdLive.csproj" ;;
+            *)
+              echo "::notice::Publishing of '$package' is not configured, nothing to publish"
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+
+          {
+            echo "publish=true"
+            echo "package=$package"
+            echo "version=$version"
+            echo "project=$project"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        if: steps.package.outputs.publish == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        if: steps.package.outputs.publish == 'true'
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 11.0.x
+
+      - name: Pack
+        if: steps.package.outputs.publish == 'true'
+        env:
+          PROJECT: ${{ steps.package.outputs.project }}
+          PACKAGE: ${{ steps.package.outputs.package }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          dotnet pack "$PROJECT" -c Release -p:Version="$VERSION" -o artifacts
+          # The tag's package id has to match the project's PackageId
+          test -f "artifacts/$PACKAGE.$VERSION.nupkg" || {
+            echo "::error::Expected artifacts/$PACKAGE.$VERSION.nupkg, got: $(ls artifacts)"
+            exit 1
+          }
+
+      - name: NuGet login (OIDC)
+        if: steps.package.outputs.publish == 'true'
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Push
+        if: steps.package.outputs.publish == 'true'
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+          PACKAGE: ${{ steps.package.outputs.package }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: >-
+          dotnet nuget push "artifacts/$PACKAGE.$VERSION.nupkg"
+          --api-key "$NUGET_API_KEY"
+          --source https://api.nuget.org/v3/index.json

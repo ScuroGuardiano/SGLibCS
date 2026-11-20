@@ -10,7 +10,14 @@
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>mdlive</ToolCommandName>
         <PackageId>ScuroGuardiano.MdLive</PackageId>
+        <!-- Przy publikacji wersję nadpisuje tag release'a (nuget-publish.yml) -->
         <Version>0.1.0</Version>
+        <Authors>ScuroGuardiano</Authors>
+        <Description>Live preview of Markdown rendered with your own Markdig pipeline and styles, driven from an editor such as Neovim.</Description>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/ScuroGuardiano/SGLibCS/tree/master/MdLive</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/ScuroGuardiano/SGLibCS/tree/master/MdLive</PackageProjectUrl>
+        <PackageTags>markdown;markdig;preview;live-preview;neovim</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
