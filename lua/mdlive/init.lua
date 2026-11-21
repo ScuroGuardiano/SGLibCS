@@ -23,6 +23,8 @@ local config = {
 local state = {
   job = nil,
   port = nil,
+  -- Token dostępu do podglądu, ważny przez cały czas działania serwera
+  token = nil,
   stdout_partial = "",
   log = {},
   augroup = nil,
@@ -31,6 +33,10 @@ local state = {
   sent_tick = nil,
   sent_line = nil,
 }
+
+local function base_url()
+  return state.port and ("http://127.0.0.1:" .. state.port .. "/") or nil
+end
 
 local function notify(msg, level)
   vim.notify("MdLive: " .. msg, level or vim.log.levels.INFO)
@@ -138,13 +144,16 @@ local function on_stdout(_, data)
   state.stdout_partial = table.remove(data)
 
   for _, line in ipairs(data) do
-    local port = tonumber(line)
-    if port and not state.port then
-      state.port = port
+    -- {"port":12345,"token":"..."}
+    local ok, info = pcall(vim.json.decode, line)
+    if ok and type(info) == "table" and info.port and info.token and not state.port then
+      state.port = info.port
+      state.token = info.token
       if config.open_browser then
         M.open()
       else
-        notify("serving on " .. M.url())
+        -- Bez tokenu: komunikat zostaje w :messages
+        notify("serving on " .. base_url())
       end
     end
   end
@@ -173,6 +182,7 @@ local function on_exit(_, code)
   local was_running = state.job ~= nil
   state.job = nil
   state.port = nil
+  state.token = nil
   state.stdout_partial = ""
   state.bufnr = nil
   clear_autocmds()
@@ -233,8 +243,10 @@ local function create_autocmds()
   })
 end
 
+--- Adres podglądu z tokenem dostępu we fragmencie (#), który nie trafia do serwera ani logów
 function M.url()
-  return state.port and ("http://127.0.0.1:" .. state.port .. "/") or nil
+  local url = base_url()
+  return url and (url .. "#" .. state.token) or nil
 end
 
 function M.is_running()
@@ -243,7 +255,7 @@ end
 
 function M.start()
   if state.job then
-    notify("already running" .. (state.port and (" on " .. M.url()) or ""))
+    notify("already running" .. (state.port and (" on " .. base_url()) or ""))
     return
   end
 
