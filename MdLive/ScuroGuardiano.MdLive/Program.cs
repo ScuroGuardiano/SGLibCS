@@ -1,4 +1,10 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.HostFiltering;
 using Microsoft.Extensions.Options;
 using ScuroGuardiano.MdLive.Commands;
@@ -40,7 +46,42 @@ builder.Services.AddSingleton<PreviewHub>();
 builder.Services.AddSingleton<MdLiveConfigurator>();
 builder.Services.AddHostedService<StdinListener>();
 builder.Services.AddHostedService<RenderService>();
-builder.Services.AddSingleton<PreviewAuth>();
+builder.Services.AddSingleton<PreviewAccessToken>();
+
+// Klucze szyfrujące ciasteczka tylko w pamięci. Domyślnie Data Protection zapisuje je na dysk
+// (~/.aspnet/DataProtection-Keys) i sesja przeżyłaby restart serwera; tak każdy start unieważnia stare ciasteczka.
+// UseEphemeralDataProtectionProvider nie wystarcza: podmienia tylko dostawcę, a menedżer kluczy
+// i tak tworzy przy starcie nieużywany klucz na dysku.
+builder.Services.AddDataProtection();
+builder.Services.Configure<KeyManagementOptions>(options => options.XmlRepository = new InMemoryXmlRepository());
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        // Ciasteczka nie są rozdzielane po portach, więc dwa podglądy na 127.0.0.1 (np. z dwóch neovimów)
+        // nadpisywałyby sobie wspólne ciasteczko. Port nie jest jeszcze znany, więc losowy sufiks na każdy start.
+        options.Cookie.Name = $"mdlive_{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4))}";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        // Podgląd działa po HTTP na loopbacku
+        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+
+        // Podgląd to nie aplikacja z formularzem logowania: zamiast przekierowań zwykłe kody statusu
+        options.Events.OnRedirectToLogin = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
+    });
+
+// Każdy endpoint wymaga zalogowania, wyjątki są oznaczone AllowAnonymous
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
 builder.Services.Configure<HostOptions>(options =>
 {
@@ -112,33 +153,25 @@ const string LoginPage =
     </html>
     """;
 
-// Bez ciasteczka sesji dostępna jest tylko strona logowania ("/") i wymiana tokenu ("/auth")
-app.Use(async (context, next) =>
+// Wymiana tokenu dostępu na ciasteczko sesji
+app.MapPost("/auth", async (AuthRequest request, PreviewAccessToken token, HttpContext context) =>
 {
-    var path = context.Request.Path;
-    if (path == "/" || path == "/auth" || context.RequestServices.GetRequiredService<PreviewAuth>().IsAuthenticated(context))
-    {
-        await next(context);
-        return;
-    }
-
-    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-});
-
-app.MapPost("/auth", (AuthRequest request, PreviewAuth auth, HttpContext context) =>
-{
-    if (!auth.IsValidToken(request.Token))
+    if (!token.IsValid(request.Token))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    auth.SignIn(context);
-    return Results.NoContent();
-});
+    var identity = new ClaimsIdentity([new Claim(ClaimTypes.Name, "editor")],
+        CookieAuthenticationDefaults.AuthenticationScheme);
 
-app.MapGet("/", (PreviewAuth auth, HttpContext context) =>
+    // IsPersistent = false: ciasteczko bez Expires, czyli sesyjne, znika po zamknięciu przeglądarki
+    await context.SignInAsync(new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = false });
+    return Results.NoContent();
+}).AllowAnonymous();
+
+app.MapGet("/", (HttpContext context) =>
 {
-    if (!auth.IsAuthenticated(context))
+    if (context.User.Identity?.IsAuthenticated != true)
     {
         return Results.Content(LoginPage, "text/html");
     }
@@ -166,7 +199,7 @@ app.MapGet("/", (PreviewAuth auth, HttpContext context) =>
         """;
 
     return Results.Content(html, "text/html");
-});
+}).AllowAnonymous();
 
 app.MapGet("/preview/sse", async (PreviewHub hub, IDatastarService datastarService, CancellationToken cancellationToken) =>
 {
@@ -202,7 +235,7 @@ await app.StartAsync();
 // Port znany jest dopiero po starcie. Pierwsza (i jedyna) linia na stdout, edytor ją czyta;
 // logi idą na stderr, więc nic innego tu nie trafi. Edytor otwiera http://127.0.0.1:<port>/#<token>.
 var port = new Uri(app.Urls.First()).Port;
-var token = app.Services.GetRequiredService<PreviewAuth>().Token;
+var token = app.Services.GetRequiredService<PreviewAccessToken>().Value;
 await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { port, token }));
 await Console.Out.FlushAsync();
 
