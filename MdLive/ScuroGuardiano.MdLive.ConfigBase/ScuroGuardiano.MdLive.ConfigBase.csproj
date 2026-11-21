@@ -4,7 +4,29 @@
         <TargetFramework>net11.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+
+        <!--
+            Paczka istnieje dla IntelliSense w .mdlive/config.csx: #r "nuget: ScuroGuardiano.MdLive.ConfigBase, x.y.z"
+            edytor pobiera z NuGeta, a MdLive mapuje na wbudowany ConfigBase. Wydawana z tą samą wersją co tool.
+        -->
+        <PackageId>ScuroGuardiano.MdLive.ConfigBase</PackageId>
+        <!-- Przy publikacji wersję nadpisuje tag release'a (nuget-publish.yml) -->
+        <Version>0.1.0</Version>
+        <Authors>ScuroGuardiano</Authors>
+        <Description>Base class for MdLive config scripts (.mdlive/config.csx). Reference it with #r "nuget: ScuroGuardiano.MdLive.ConfigBase, &lt;version&gt;" to get IntelliSense, MdLive maps it to the version it ships with.</Description>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/ScuroGuardiano/SGLibCS/tree/master/MdLive</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLive/docs/scripting.md</PackageProjectUrl>
+        <PackageTags>markdown;markdig;mdlive;csx</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <!-- Komentarze dokumentacyjne trafiają do paczki, więc edytor pokazuje je w podpowiedziach -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Humanizer" Version="3.0.10" />

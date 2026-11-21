@@ -83,7 +83,8 @@ internal static class TrustCommand
                     size = f.Content.Length
                 }),
                 frameworkReferences = bundle.FrameworkReferences,
-                errors = bundle.Errors
+                errors = bundle.Errors,
+                warnings = bundle.Warnings
             }, JsonOptions));
         }
         else
@@ -154,6 +155,11 @@ internal static class TrustCommand
         foreach (var error in bundle.Errors)
         {
             Console.WriteLine($"  error: {error}");
+        }
+
+        foreach (var warning in bundle.Warnings)
+        {
+            Console.WriteLine($"  warning: {warning}");
         }
 
         Console.WriteLine();
