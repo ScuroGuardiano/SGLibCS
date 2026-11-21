@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.HostFiltering;
 using Microsoft.Extensions.Options;
 using ScuroGuardiano.MdLive.Commands;
 using ScuroGuardiano.MdLive.ConfigBase;
+using ScuroGuardiano.MdLive.Scripting;
 using ScuroGuardiano.MdLive.Services;
 using StarFederation.Datastar.DependencyInjection;
 
@@ -16,6 +17,9 @@ switch (args)
 {
     case ["init", .. var initArgs]:
         return await InitCommand.RunAsync(initArgs);
+
+    case ["trust", .. var trustArgs]:
+        return await TrustCommand.RunAsync(trustArgs);
 
     case ["serve", ..]:
         break;
@@ -44,6 +48,9 @@ builder.Services.AddSingleton<DocumentContentChannel>();
 
 builder.Services.AddSingleton<PreviewHub>();
 builder.Services.AddSingleton<MdLiveConfigurator>();
+builder.Services.AddSingleton(TrustStore.CreateDefault());
+builder.Services.AddSingleton<ScriptCompiler>();
+builder.Services.AddSingleton<ConfiguratorProvider>();
 builder.Services.AddHostedService<StdinListener>();
 builder.Services.AddHostedService<RenderService>();
 builder.Services.AddSingleton<PreviewAccessToken>();
@@ -254,6 +261,12 @@ static void PrintUsage(TextWriter writer)
           serve    Start the preview server on a random port on 127.0.0.1 and print
                    {"port":<port>,"token":"<access token>"} to stdout; open http://127.0.0.1:<port>/#<token>.
                    Reads editor messages from stdin, exits when stdin is closed.
+          trust    Review and trust .mdlive/config.csx with everything it loads. Only a trusted
+                   config script is run, any change to it has to be trusted again.
+                   --show       Only list the files, their hashes and the trust status.
+                   --json       Print the listing as JSON.
+                   --hash <h>   Trust only if the config still has this hash (non-interactive use).
+                   --revoke     Forget the trust for this config.
           help     Show this message.
         """);
 }

@@ -20,10 +20,18 @@
         <PackageTags>markdown;markdig;preview;live-preview;neovim</PackageTags>
         <!-- Linki w README są bezwzględne, bo nuget.org nie rozwiązuje względnych -->
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <!-- Roslyn przynosi tłumaczenia komunikatów na 13 języków, diagnostyki wystarczą po angielsku -->
+        <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="StarFederation.Datastar" Version="1.4.0" />
+        <!-- Kompilacja .mdlive/config.csx. Samo CSharp, bez .Scripting, patrz Scripting/ScriptCompiler.cs -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="ScuroGuardiano.MdLive.Tests" />
     </ItemGroup>
 
     <ItemGroup>
