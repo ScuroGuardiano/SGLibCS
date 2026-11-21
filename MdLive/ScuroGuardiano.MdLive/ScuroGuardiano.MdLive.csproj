@@ -18,10 +18,16 @@
         <RepositoryUrl>https://github.com/ScuroGuardiano/SGLibCS/tree/master/MdLive</RepositoryUrl>
         <PackageProjectUrl>https://github.com/ScuroGuardiano/SGLibCS/tree/master/MdLive</PackageProjectUrl>
         <PackageTags>markdown;markdig;preview;live-preview;neovim</PackageTags>
+        <!-- Linki w README są bezwzględne, bo nuget.org nie rozwiązuje względnych -->
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="StarFederation.Datastar" Version="1.4.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
     <ItemGroup>

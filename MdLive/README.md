@@ -5,14 +5,14 @@ template and styles, so the browser shows exactly what your site or document gen
 
 MdLive is not a standalone editor or app. It's a small preview server meant to be **started and driven
 by an editor**: the editor sends the buffer content and cursor position, MdLive renders it and pushes
-the result to the browser as you type. A ready-made [Neovim plugin](nvim) is included.
+the result to the browser as you type. A ready-made [Neovim plugin](https://github.com/ScuroGuardiano/SGLibCS/tree/master/MdLive/nvim) is included.
 
 - live updates while typing, before saving, morphed into the page without reloads
   ([Datastar](https://data-star.dev)),
 - scroll sync: the block under the cursor stays in the middle of the preview,
 - your HTML template, CSS and scripts from `.mdlive/`, re-applied as soon as you change them,
 - server-side syntax highlighting with CSS classes you style yourself
-  ([docs/syntax-highlight.md](docs/syntax-highlight.md)),
+  ([docs/syntax-highlight.md](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLive/docs/syntax-highlight.md)),
 - images referenced from the document, served from its directory.
 
 ## Install
@@ -49,7 +49,7 @@ dotnet tool install -g --add-source ./nupkg ScuroGuardiano.MdLive
 2. Optionally run `mdlive init` in your project to get an editable `.mdlive/` folder.
 3. Open a Markdown file and run `:MdLiveStart`.
 
-See [nvim/README.md](nvim/README.md) for commands and options.
+See [nvim/README.md](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLive/nvim/README.md) for commands and options.
 
 ## Commands
 
@@ -76,7 +76,7 @@ Without `template.html` a minimal built-in template is used. The title comes fro
 level 1 heading, falling back to the file name.
 
 The Markdown pipeline, template loading and the rest are defined in
-[`MdLiveConfigurator`](ScuroGuardiano.MdLive.ConfigBase/MdLiveConfigurator.cs), with virtual methods
+[`MdLiveConfigurator`](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLive/ScuroGuardiano.MdLive.ConfigBase/MdLiveConfigurator.cs), with virtual methods
 meant to be overridden.
 
 ## Editor integration
@@ -84,7 +84,7 @@ meant to be overridden.
 `mdlive serve` talks to the editor over stdio: it prints one line on stdout telling the editor where
 the preview is, reads one JSON message per line on stdin (buffer content, cursor line) and exits when
 stdin is closed. Logs go to stderr. The exact protocol is described in
-[nvim/README.md](nvim/README.md#protocol), which is also the reference implementation for other editors.
+[nvim/README.md](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLive/nvim/README.md#protocol), which is also the reference implementation for other editors.
 
 ## Security
 
@@ -97,4 +97,4 @@ The preview server is meant for the local user only:
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLive/LICENSE)
