@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.HostFiltering;
 using Microsoft.Extensions.Options;
 using ScuroGuardiano.MdLive.Commands;
@@ -39,6 +40,7 @@ builder.Services.AddSingleton<PreviewHub>();
 builder.Services.AddSingleton<MdLiveConfigurator>();
 builder.Services.AddHostedService<StdinListener>();
 builder.Services.AddHostedService<RenderService>();
+builder.Services.AddSingleton<PreviewAuth>();
 
 builder.Services.Configure<HostOptions>(options =>
 {
@@ -69,8 +71,78 @@ if (app.Services.GetRequiredService<IOptions<HostFilteringOptions>>().Value.Allo
                           "Any website can reach the preview server through DNS rebinding");
 }
 
-app.MapGet("/", () =>
+// Strona dla przeglądarki bez ciasteczka: zabiera token z #, usuwa go z paska adresu i historii,
+// wymienia na ciasteczko i przeładowuje się już jako podgląd
+// language=html
+const string LoginPage =
+    """
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>MdLive</title>
+    </head>
+    <body>
+      <p id="status">Connecting...</p>
+      <script>
+        (async () => {
+          const token = location.hash.slice(1);
+          history.replaceState(null, "", location.pathname + location.search);
+
+          const status = document.getElementById("status");
+          if (!token) {
+            status.textContent = "Missing access token. Open the preview from the editor (:MdLiveOpen).";
+            return;
+          }
+
+          const response = await fetch("/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+          });
+
+          if (response.ok) {
+            location.reload();
+          } else {
+            status.textContent = "Invalid access token, the server was probably restarted. Open the preview from the editor again (:MdLiveOpen).";
+          }
+        })();
+      </script>
+    </body>
+    </html>
+    """;
+
+// Bez ciasteczka sesji dostępna jest tylko strona logowania ("/") i wymiana tokenu ("/auth")
+app.Use(async (context, next) =>
 {
+    var path = context.Request.Path;
+    if (path == "/" || path == "/auth" || context.RequestServices.GetRequiredService<PreviewAuth>().IsAuthenticated(context))
+    {
+        await next(context);
+        return;
+    }
+
+    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+});
+
+app.MapPost("/auth", (AuthRequest request, PreviewAuth auth, HttpContext context) =>
+{
+    if (!auth.IsValidToken(request.Token))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    auth.SignIn(context);
+    return Results.NoContent();
+});
+
+app.MapGet("/", (PreviewAuth auth, HttpContext context) =>
+{
+    if (!auth.IsAuthenticated(context))
+    {
+        return Results.Content(LoginPage, "text/html");
+    }
+
     // language=html
     const string html =
         """
@@ -128,9 +200,10 @@ app.MapDocumentFiles();
 await app.StartAsync();
 
 // Port znany jest dopiero po starcie. Pierwsza (i jedyna) linia na stdout, edytor ją czyta;
-// logi idą na stderr, więc nic innego tu nie trafi.
+// logi idą na stderr, więc nic innego tu nie trafi. Edytor otwiera http://127.0.0.1:<port>/#<token>.
 var port = new Uri(app.Urls.First()).Port;
-await Console.Out.WriteLineAsync(port.ToString());
+var token = app.Services.GetRequiredService<PreviewAuth>().Token;
+await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { port, token }));
 await Console.Out.FlushAsync();
 
 await app.WaitForShutdownAsync();
@@ -145,8 +218,13 @@ static void PrintUsage(TextWriter writer)
           init     Create .mdlive in the current directory with default style.css and template.html.
                    Fails if .mdlive already exists and isn't empty.
                    --force, -f  Overwrite the default files, other files in .mdlive are kept.
-          serve    Start the preview server on a random port on 127.0.0.1 and print the port to stdout.
+          serve    Start the preview server on a random port on 127.0.0.1 and print
+                   {"port":<port>,"token":"<access token>"} to stdout; open http://127.0.0.1:<port>/#<token>.
                    Reads editor messages from stdin, exits when stdin is closed.
           help     Show this message.
         """);
 }
+
+// Ciało POST /auth, wysyłane jako JSON przez stronę logowania. JSON wymaga preflightu CORS,
+// więc inna strona nie wyśle go z przeglądarki użytkownika.
+internal sealed record AuthRequest(string? Token);

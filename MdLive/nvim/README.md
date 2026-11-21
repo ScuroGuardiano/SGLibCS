@@ -73,7 +73,12 @@ require("mdlive").setup({
 
 The plugin talks to `mdlive serve` over stdio:
 
-- **stdout**: the server prints a single line with the port it listens on, on `127.0.0.1`.
+- **stdout**: the server prints a single JSON line, `{"port":12345,"token":"..."}`, with the port
+  it listens on, on `127.0.0.1`, and an access token. The preview is opened as
+  `http://127.0.0.1:<port>/#<token>`: the page exchanges the token for a session cookie and
+  removes it from the address bar. The cookie is a session cookie, gone when the browser closes,
+  and both secrets are generated anew on every server start. Without the cookie the server
+  answers only the login page, everything else is `401`.
 - **stdin**: one JSON message per line:
   - `{"type":"content","path":"/abs/file.md","text":"..."}`, the whole buffer,
   - `{"type":"cursor","line":42}`, 1-based cursor line, used for scroll sync.
