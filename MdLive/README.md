@@ -93,6 +93,13 @@ The preview server is meant for the local user only:
 - it listens only on `127.0.0.1`, on a random free port, and this can't be changed by configuration,
 - requests with a `Host` header other than `localhost`, `127.0.0.1` or `[::1]` are rejected
   (DNS rebinding). Override with `--AllowedHosts=...` or the `AllowedHosts` environment variable,
+- every request needs a session, so other local users and processes can't read the preview. On each start
+  the server generates a random access token and gives it only to the editor, on stdout. The editor opens
+  `http://127.0.0.1:<port>/#<token>`. The token is in the URL fragment, which the browser never sends
+  to the server. The page removes it from the address bar and history and exchanges it for a session cookie:
+  `HttpOnly`, `SameSite=Strict`, without an expiry date, so it disappears when the browser is closed,
+- the cookie encryption keys are kept only in memory, so restarting the server invalidates all sessions
+  and the old token. Open the preview from the editor again (`:MdLiveOpen`),
 - only image files are served from the document's directory, never anything outside it.
 
 ## License
