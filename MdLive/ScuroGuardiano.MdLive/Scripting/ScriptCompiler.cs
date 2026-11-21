@@ -98,7 +98,9 @@ internal sealed class ScriptCompiler
         var errors = result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Select(Format).ToList();
         if (!result.Success)
         {
-            throw new ScriptCompilationException(errors.Count > 0 ? errors : ["Emit failed"]);
+            // Roslyn nie emituje skryptu bez żadnego kodu (same komentarze, same #load pustych plików) i nie podaje
+            // przy tym żadnej diagnostyki
+            throw new ScriptCompilationException(errors.Count > 0 ? errors : [$"{main.FullPath}: the script contains no code"]);
         }
 
         var entryPoint = compilation.GetEntryPoint(CancellationToken.None)

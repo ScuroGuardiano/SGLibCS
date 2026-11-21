@@ -84,8 +84,10 @@ internal sealed class ConfiguratorProvider : IDisposable
         {
             try
             {
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 (next, context) = await LoadScript(bundle);
-                _logger.LogInformation("Loaded {Path} ({Hash})", bundle.Main.FullPath, bundle.Hash[..12]);
+                _logger.LogInformation("Loaded {Path} ({Hash}) in {Elapsed} ms", bundle.Main.FullPath, bundle.Hash[..12],
+                    stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {

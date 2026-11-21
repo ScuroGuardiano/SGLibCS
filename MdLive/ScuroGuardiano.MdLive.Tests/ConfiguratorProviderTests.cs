@@ -185,6 +185,17 @@ public class ConfiguratorProviderTests
     }
 
     [Fact]
+    public async Task EmptyScript_IsReported()
+    {
+        using var project = new TestProject();
+        project.Write("config.csx", "// nothing here yet\n");
+        project.TrustCurrent();
+        using var provider = project.CreateProvider();
+
+        Assert.Contains("contains no code", (await provider.GetAsync()).Notice);
+    }
+
+    [Fact]
     public async Task RuntimeError_IsShownWithScriptLine()
     {
         using var project = new TestProject();
