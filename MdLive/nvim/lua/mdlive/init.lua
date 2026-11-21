@@ -32,6 +32,8 @@ local state = {
   bufnr = nil,
   sent_tick = nil,
   sent_line = nil,
+  -- Katalog roboczy serwera, w nim szuka .mdlive/
+  cwd = nil,
 }
 
 local function base_url()
@@ -185,6 +187,7 @@ local function on_exit(_, code)
   state.token = nil
   state.stdout_partial = ""
   state.bufnr = nil
+  state.cwd = nil
   clear_autocmds()
 
   if was_running and code ~= 0 and code ~= 143 then
@@ -272,8 +275,9 @@ function M.start()
   end
 
   state.log = {}
+  state.cwd = vim.fn.getcwd()
   local job = vim.fn.jobstart(config.cmd, {
-    cwd = vim.fn.getcwd(),
+    cwd = state.cwd,
     on_stdout = on_stdout,
     on_stderr = on_stderr,
     on_exit = on_exit,
@@ -306,6 +310,105 @@ function M.open()
   end
 
   vim.ui.open(url)
+end
+
+-- Komenda mdlive bez "serve" i tego, co po nim, np. { "dotnet", "mdlive.dll" } z { "dotnet", "mdlive.dll", "serve" }
+local function mdlive_base_cmd()
+  for i, arg in ipairs(config.cmd) do
+    if arg == "serve" then
+      return vim.list_slice(config.cmd, 1, i - 1)
+    end
+  end
+  return { config.cmd[1] }
+end
+
+local function run_mdlive(args, callback)
+  local cmd = vim.list_extend(mdlive_base_cmd(), args)
+  vim.system(cmd, { cwd = state.cwd or vim.fn.getcwd(), text = true }, vim.schedule_wrap(callback))
+end
+
+local function trimmed(text)
+  return vim.trim(text or "")
+end
+
+--- Pokazuje pliki, z których składa się .mdlive/config.csx, z hashami i po potwierdzeniu ufa dokładnie
+--- tej wersji. "Review" wrzuca je na quickfix. Zaufanie idzie przez --hash z pokazanej listy, więc jeśli
+--- coś zmieni się między przejrzeniem a potwierdzeniem, nic nie zostanie zaufane.
+function M.trust()
+  run_mdlive({ "trust", "--show", "--json" }, function(result)
+    if result.code ~= 0 then
+      notify(trimmed(result.stderr), vim.log.levels.ERROR)
+      return
+    end
+
+    local ok, info = pcall(vim.json.decode, result.stdout)
+    if not ok or type(info) ~= "table" or not info.hash then
+      notify("unexpected output of mdlive trust --show --json", vim.log.levels.ERROR)
+      return
+    end
+
+    if #info.errors > 0 then
+      notify("fix config.csx first:\n" .. table.concat(info.errors, "\n"), vim.log.levels.ERROR)
+      return
+    end
+
+    if info.status == "trusted" then
+      notify(info.directory .. " is already trusted")
+      return
+    end
+
+    if info.status == "storerejected" then
+      notify(info.problem, vim.log.levels.ERROR)
+      return
+    end
+
+    local lines = {
+      info.status == "changed" and "config.csx changed since it was trusted." or "config.csx is not trusted.",
+      "Trust and run this code with your permissions?",
+      "",
+      info.directory,
+    }
+    for _, file in ipairs(info.files) do
+      table.insert(lines, string.format("  %-9s %s  %s", file.kind, file.sha256:sub(1, 12), file.path))
+    end
+    for _, name in ipairs(info.frameworkReferences) do
+      table.insert(lines, "  framework " .. name)
+    end
+
+    local choice = vim.fn.confirm(table.concat(lines, "\n"), "&Trust\n&Review\n&Cancel", 3)
+
+    if choice == 2 then
+      local items = {}
+      for _, file in ipairs(info.files) do
+        table.insert(items, {
+          filename = file.fullPath,
+          lnum = 1,
+          text = file.kind .. " sha256:" .. file.sha256 .. (file.kind == "reference" and " (binary)" or ""),
+        })
+      end
+      vim.fn.setqflist({}, " ", { title = "MdLive: review before :MdLiveTrust", items = items })
+      vim.cmd("copen")
+      notify("review the files, then run :MdLiveTrust again")
+      return
+    end
+
+    if choice ~= 1 then
+      return
+    end
+
+    run_mdlive({ "trust", "--hash", info.hash }, function(trust_result)
+      if trust_result.code == 0 then
+        notify("trusted " .. info.directory)
+        -- Przerenderuj, żeby podgląd od razu użył skryptu
+        send_content(true)
+      elseif trust_result.code == 2 then
+        notify("config changed while you were reviewing it, nothing trusted. Run :MdLiveTrust again",
+          vim.log.levels.WARN)
+      else
+        notify(trimmed(trust_result.stderr), vim.log.levels.ERROR)
+      end
+    end)
+  end)
 end
 
 function M.show_log()

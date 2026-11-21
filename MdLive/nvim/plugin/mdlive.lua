@@ -11,3 +11,5 @@ vim.api.nvim_create_user_command("MdLiveOpen", function() require("mdlive").open
   { desc = "Open MdLive preview in the browser" })
 vim.api.nvim_create_user_command("MdLiveLog", function() require("mdlive").show_log() end,
   { desc = "Show MdLive server log" })
+vim.api.nvim_create_user_command("MdLiveTrust", function() require("mdlive").trust() end,
+  { desc = "Review and trust .mdlive/config.csx" })

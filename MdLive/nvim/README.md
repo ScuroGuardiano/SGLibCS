@@ -23,7 +23,7 @@ Markdig pipeline and `.mdlive` styles produce. Requires Neovim 0.10+.
      branch = "mdlive/nvim",
      name = "mdlive",
      ft = "markdown",
-     cmd = { "MdLiveStart", "MdLiveStop", "MdLiveOpen", "MdLiveLog" },
+     cmd = { "MdLiveStart", "MdLiveStop", "MdLiveOpen", "MdLiveLog", "MdLiveTrust" },
      opts = {},
    }
    ```
@@ -45,10 +45,24 @@ Markdig pipeline and `.mdlive` styles produce. Requires Neovim 0.10+.
 | `:MdLiveStop`  | Stop the server                                                  |
 | `:MdLiveOpen`  | Open the preview in the browser again                            |
 | `:MdLiveLog`   | Show the server's stderr                                         |
+| `:MdLiveTrust` | Review and trust `.mdlive/config.csx`, see below                 |
 
 The server runs with Neovim's current directory as its working directory, so `.mdlive/` is
 looked up there. Switching to another Markdown buffer switches the preview to it.
 Saving a file in `.mdlive/` re-renders the preview, picking up style and template changes.
+
+### Trusting `config.csx`
+
+A C# config script ([docs/scripting.md](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLive/docs/scripting.md)) runs only
+once trusted. Until then the preview uses the default config and shows a banner. `:MdLiveTrust` lists every
+file the config consists of with its SHA-256 and offers:
+
+- **Trust:** runs `mdlive trust --hash <hash of the shown list>`, so if anything changed in the meantime,
+  nothing is trusted. The preview re-renders with the script right away,
+- **Review:** puts the files on the quickfix list. Read them, then run `:MdLiveTrust` again,
+- **Cancel.**
+
+Editing any of the files makes the config untrusted again, and the preview falls back to the default.
 
 ## Options
 
