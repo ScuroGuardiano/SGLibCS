@@ -1,3 +1,10 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.HostFiltering;
 using Microsoft.Extensions.Options;
 using ScuroGuardiano.MdLive.Commands;
@@ -39,6 +46,42 @@ builder.Services.AddSingleton<PreviewHub>();
 builder.Services.AddSingleton<MdLiveConfigurator>();
 builder.Services.AddHostedService<StdinListener>();
 builder.Services.AddHostedService<RenderService>();
+builder.Services.AddSingleton<PreviewAccessToken>();
+
+// Klucze szyfrujące ciasteczka tylko w pamięci. Domyślnie Data Protection zapisuje je na dysk
+// (~/.aspnet/DataProtection-Keys) i sesja przeżyłaby restart serwera; tak każdy start unieważnia stare ciasteczka.
+// UseEphemeralDataProtectionProvider nie wystarcza: podmienia tylko dostawcę, a menedżer kluczy
+// i tak tworzy przy starcie nieużywany klucz na dysku.
+builder.Services.AddDataProtection();
+builder.Services.Configure<KeyManagementOptions>(options => options.XmlRepository = new InMemoryXmlRepository());
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        // Ciasteczka nie są rozdzielane po portach, więc dwa podglądy na 127.0.0.1 (np. z dwóch neovimów)
+        // nadpisywałyby sobie wspólne ciasteczko. Port nie jest jeszcze znany, więc losowy sufiks na każdy start.
+        options.Cookie.Name = $"mdlive_{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4))}";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        // Podgląd działa po HTTP na loopbacku
+        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+
+        // Podgląd to nie aplikacja z formularzem logowania: zamiast przekierowań zwykłe kody statusu
+        options.Events.OnRedirectToLogin = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
+    });
+
+// Każdy endpoint wymaga zalogowania, wyjątki są oznaczone AllowAnonymous
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
 builder.Services.Configure<HostOptions>(options =>
 {
@@ -69,8 +112,70 @@ if (app.Services.GetRequiredService<IOptions<HostFilteringOptions>>().Value.Allo
                           "Any website can reach the preview server through DNS rebinding");
 }
 
-app.MapGet("/", () =>
+// Strona dla przeglądarki bez ciasteczka: zabiera token z #, usuwa go z paska adresu i historii,
+// wymienia na ciasteczko i przeładowuje się już jako podgląd
+// language=html
+const string LoginPage =
+    """
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>MdLive</title>
+    </head>
+    <body>
+      <p id="status">Connecting...</p>
+      <script>
+        (async () => {
+          const token = location.hash.slice(1);
+          history.replaceState(null, "", location.pathname + location.search);
+
+          const status = document.getElementById("status");
+          if (!token) {
+            status.textContent = "Missing access token. Open the preview from the editor (:MdLiveOpen).";
+            return;
+          }
+
+          const response = await fetch("/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+          });
+
+          if (response.ok) {
+            location.reload();
+          } else {
+            status.textContent = "Invalid access token, the server was probably restarted. Open the preview from the editor again (:MdLiveOpen).";
+          }
+        })();
+      </script>
+    </body>
+    </html>
+    """;
+
+// Wymiana tokenu dostępu na ciasteczko sesji
+app.MapPost("/auth", async (AuthRequest request, PreviewAccessToken token, HttpContext context) =>
 {
+    if (!token.IsValid(request.Token))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var identity = new ClaimsIdentity([new Claim(ClaimTypes.Name, "editor")],
+        CookieAuthenticationDefaults.AuthenticationScheme);
+
+    // IsPersistent = false: ciasteczko bez Expires, czyli sesyjne, znika po zamknięciu przeglądarki
+    await context.SignInAsync(new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = false });
+    return Results.NoContent();
+}).AllowAnonymous();
+
+app.MapGet("/", (HttpContext context) =>
+{
+    if (context.User.Identity?.IsAuthenticated != true)
+    {
+        return Results.Content(LoginPage, "text/html");
+    }
+
     // language=html
     const string html =
         """
@@ -94,7 +199,7 @@ app.MapGet("/", () =>
         """;
 
     return Results.Content(html, "text/html");
-});
+}).AllowAnonymous();
 
 app.MapGet("/preview/sse", async (PreviewHub hub, IDatastarService datastarService, CancellationToken cancellationToken) =>
 {
@@ -128,9 +233,10 @@ app.MapDocumentFiles();
 await app.StartAsync();
 
 // Port znany jest dopiero po starcie. Pierwsza (i jedyna) linia na stdout, edytor ją czyta;
-// logi idą na stderr, więc nic innego tu nie trafi.
+// logi idą na stderr, więc nic innego tu nie trafi. Edytor otwiera http://127.0.0.1:<port>/#<token>.
 var port = new Uri(app.Urls.First()).Port;
-await Console.Out.WriteLineAsync(port.ToString());
+var token = app.Services.GetRequiredService<PreviewAccessToken>().Value;
+await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { port, token }));
 await Console.Out.FlushAsync();
 
 await app.WaitForShutdownAsync();
@@ -145,8 +251,13 @@ static void PrintUsage(TextWriter writer)
           init     Create .mdlive in the current directory with default style.css and template.html.
                    Fails if .mdlive already exists and isn't empty.
                    --force, -f  Overwrite the default files, other files in .mdlive are kept.
-          serve    Start the preview server on a random port on 127.0.0.1 and print the port to stdout.
+          serve    Start the preview server on a random port on 127.0.0.1 and print
+                   {"port":<port>,"token":"<access token>"} to stdout; open http://127.0.0.1:<port>/#<token>.
                    Reads editor messages from stdin, exits when stdin is closed.
           help     Show this message.
         """);
 }
+
+// Ciało POST /auth, wysyłane jako JSON przez stronę logowania. JSON wymaga preflightu CORS,
+// więc inna strona nie wyśle go z przeglądarki użytkownika.
+internal sealed record AuthRequest(string? Token);
