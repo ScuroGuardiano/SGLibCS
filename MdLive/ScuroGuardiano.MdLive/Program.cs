@@ -30,7 +30,14 @@ switch (args)
 }
 
 // Wszystko poniżej to "mdlive serve". Reszta argumentów idzie do konfiguracji, np. --AllowedHosts=...
-var builder = WebApplication.CreateBuilder(args[1..]);
+// ContentRoot to katalog toola, nie bieżący. Domyślnie to cwd, czyli katalog otwartego projektu, a wtedy
+// appsettings.json z obcego repo mógłby np. przestawić Kestrela na 0.0.0.0 (Kestrel:Endpoints wygrywa z UseUrls)
+// albo wyłączyć filtrowanie hosta. Pliki .mdlive i dokumenty i tak są szukane względem cwd, nie ContentRoot.
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args[1..],
+    ContentRootPath = AppContext.BaseDirectory
+});
 
 // Tylko loopback i losowy wolny port. Celowo nie do nadpisania z konfiguracji: wystawienie podglądu
 // poza localhost wyłączyłoby całą ochronę opartą na tym, że serwer jest osiągalny tylko lokalnie.
@@ -89,7 +96,7 @@ builder.Services.Configure<HostOptions>(options =>
 });
 
 // Domyślnie tylko loopback, nadpisywalne przez AllowedHosts z konfiguracji (env, --AllowedHosts=..., appsettings).
-// appsettings.json jest czytany z bieżącego katalogu, więc w dotnet toolu zwykle go nie ma albo jest cudzy.
+// appsettings.json jest czytany z katalogu toola (ContentRootPath wyżej), nie z projektu użytkownika.
 // Frameworkowe PostConfigure (zarejestrowane w CreateBuilder, więc wykonuje się przed naszym) przy pustym
 // AllowedHosts w konfiguracji wstawia "*". Po samych opcjach nie da się odróżnić tego od jawnego "*",
 // dlatego sprawdzamy konfigurację, a nie listę.

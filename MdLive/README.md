@@ -91,6 +91,8 @@ stdin is closed. Logs go to stderr. The exact protocol is described in
 The preview server is meant for the local user only:
 
 - it listens only on `127.0.0.1`, on a random free port, and this can't be changed by configuration,
+- configuration files in the opened project (`appsettings.json`) are not read, so a cloned repository
+  can't change how the server listens or turn off the protections below,
 - requests with a `Host` header other than `localhost`, `127.0.0.1` or `[::1]` are rejected
   (DNS rebinding). Override with `--AllowedHosts=...` or the `AllowedHosts` environment variable,
 - every request needs a session, so other local users and processes can't read the preview. On each start
