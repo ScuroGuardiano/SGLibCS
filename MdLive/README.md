@@ -41,7 +41,7 @@ dotnet tool install -g --add-source ./nupkg ScuroGuardiano.MdLive
      branch = "mdlive/nvim",
      name = "mdlive",
      ft = "markdown",
-     cmd = { "MdLiveStart", "MdLiveStop", "MdLiveOpen", "MdLiveLog" },
+     cmd = { "MdLiveStart", "MdLiveStop", "MdLiveOpen", "MdLiveLog", "MdLiveTrust" },
      opts = {},
    }
    ```
