@@ -24,6 +24,11 @@ switch (args)
     case ["serve", ..]:
         break;
 
+    case ["version" or "--version", ..]:
+        Console.WriteLine($"mdlive {GetToolVersion()}");
+        Console.WriteLine($"{ScriptBundle.ConfigBasePackageId} {ScriptBundle.ConfigBaseVersion}");
+        return 0;
+
     case ["help" or "--help" or "-h", ..]:
         PrintUsage(Console.Out);
         return 0;
@@ -256,6 +261,12 @@ await Console.Out.FlushAsync();
 await app.WaitForShutdownAsync();
 return 0;
 
+static string GetToolVersion() =>
+    typeof(Program).Assembly
+        .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+        .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+        .FirstOrDefault()?.InformationalVersion.Split('+')[0] ?? "unknown";
+
 static void PrintUsage(TextWriter writer)
 {
     writer.WriteLine("""
@@ -274,6 +285,8 @@ static void PrintUsage(TextWriter writer)
                    --json       Print the listing as JSON.
                    --hash <h>   Trust only if the config still has this hash (non-interactive use).
                    --revoke     Forget the trust for this config.
+          version  Show the version of mdlive and of the bundled ScuroGuardiano.MdLive.ConfigBase,
+                   to use in #r "nuget: ScuroGuardiano.MdLive.ConfigBase, <version>".
           help     Show this message.
         """);
 }

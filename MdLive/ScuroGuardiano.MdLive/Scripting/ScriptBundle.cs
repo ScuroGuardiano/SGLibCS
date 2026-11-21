@@ -48,13 +48,24 @@ internal sealed class ScriptBundle
     internal static readonly CSharpParseOptions ParseOptions =
         new(LanguageVersion.Latest, DocumentationMode.None, SourceCodeKind.Script);
 
+    /// <summary>
+    /// The only NuGet package a script may reference. It's not downloaded: the reference maps to the
+    /// <c>ScuroGuardiano.MdLive.ConfigBase</c> MdLive is built with. It exists so that editors which understand
+    /// <c>#r "nuget: ..."</c> (e.g. OmniSharp) can restore the package and offer IntelliSense in <c>config.csx</c>.
+    /// </summary>
+    public const string ConfigBasePackageId = "ScuroGuardiano.MdLive.ConfigBase";
+
+    /// <summary>Version of the ConfigBase assembly MdLive runs with, e.g. <c>0.2.0</c>.</summary>
+    public static string ConfigBaseVersion { get; } = GetConfigBaseVersion();
+
     private ScriptBundle(string configDirectory, IReadOnlyList<ScriptFile> files,
-        IReadOnlyList<string> frameworkReferences, IReadOnlyList<string> errors)
+        IReadOnlyList<string> frameworkReferences, IReadOnlyList<string> errors, IReadOnlyList<string> warnings)
     {
         ConfigDirectory = configDirectory;
         Files = files;
         FrameworkReferences = frameworkReferences;
         Errors = errors;
+        Warnings = warnings;
         Manifest = BuildManifest();
         Hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Manifest)));
     }
@@ -75,6 +86,9 @@ internal sealed class ScriptBundle
 
     /// <summary>Problems with the directives. A bundle with errors is never compiled.</summary>
     public IReadOnlyList<string> Errors { get; }
+
+    /// <summary>Things worth telling the user that don't stop the script, e.g. a ConfigBase version mismatch.</summary>
+    public IReadOnlyList<string> Warnings { get; }
 
     /// <summary>Text listing every input with its SHA-256, the thing the user actually reviews and trusts.</summary>
     public string Manifest { get; }
@@ -107,7 +121,7 @@ internal sealed class ScriptBundle
         var reader = new Reader(directory, isKnownAssemblyName);
         reader.Run(mainPath);
 
-        return new ScriptBundle(directory, reader.Files, reader.FrameworkReferences, reader.Errors);
+        return new ScriptBundle(directory, reader.Files, reader.FrameworkReferences, reader.Errors, reader.Warnings);
     }
 
     private string BuildManifest()
@@ -160,11 +174,46 @@ internal sealed class ScriptBundle
         return Path.GetFullPath(value, baseDirectory);
     }
 
+    /// <summary>
+    /// Parses dotnet-script style <c>nuget: Package.Id, 1.2.3</c> (the version is optional).
+    /// </summary>
+    internal static bool TryParseNuGetReference(string value, out string packageId, out string? version)
+    {
+        packageId = "";
+        version = null;
+
+        if (!value.StartsWith("nuget:", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var parts = value["nuget:".Length..].Split(',', StringSplitOptions.TrimEntries);
+        packageId = parts[0];
+        version = parts.Length > 1 && parts[1].Length > 0 ? parts[1] : null;
+        return true;
+    }
+
+    internal static bool IsConfigBasePackage(string packageId) =>
+        string.Equals(packageId, ConfigBasePackageId, StringComparison.OrdinalIgnoreCase);
+
+    private static string GetConfigBaseVersion()
+    {
+        var assembly = typeof(ScuroGuardiano.MdLive.ConfigBase.MdLiveConfigurator).Assembly;
+        var informational = assembly
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+            .FirstOrDefault()?.InformationalVersion;
+
+        // "0.2.0+<commit>" -> "0.2.0"
+        return informational?.Split('+')[0] ?? assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+    }
+
     private sealed class Reader(string directory, Func<string, bool> isKnownAssemblyName)
     {
         public List<ScriptFile> Files { get; } = [];
         public List<string> FrameworkReferences { get; } = [];
         public List<string> Errors { get; } = [];
+        public List<string> Warnings { get; } = [];
 
         private readonly HashSet<string> _visited =
             new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
@@ -209,10 +258,9 @@ internal sealed class ScriptBundle
 
         private void AddReference(string value, string baseFile, DirectiveTriviaSyntax directive)
         {
-            if (value.StartsWith("nuget:", StringComparison.OrdinalIgnoreCase))
+            if (TryParseNuGetReference(value, out var packageId, out var version))
             {
-                Error(directive, "NuGet references are not supported. Put the assembly in the config directory " +
-                                 "and reference it with #r \"name.dll\"");
+                AddNuGetReference(packageId, version, directive);
                 return;
             }
 
@@ -241,6 +289,30 @@ internal sealed class ScriptBundle
             if (_visited.Add(target) && CheckExtension(target, ".dll", directive))
             {
                 ReadFile(target, ScriptFileKind.Reference, directive);
+            }
+        }
+
+        private void AddNuGetReference(string packageId, string? version, DirectiveTriviaSyntax directive)
+        {
+            if (!IsConfigBasePackage(packageId))
+            {
+                Error(directive, $"NuGet references are not supported, except {ConfigBasePackageId}. " +
+                                 "Put the assembly in the config directory and reference it with #r \"name.dll\"");
+                return;
+            }
+
+            // Nic nie pobieramy: to ten sam ConfigBase, z którym działa serwer
+            if (!FrameworkReferences.Contains(ConfigBasePackageId))
+            {
+                FrameworkReferences.Add(ConfigBasePackageId);
+            }
+
+            if (version is not null && version != ConfigBaseVersion)
+            {
+                var span = directive.GetLocation().GetLineSpan();
+                Warnings.Add($"{span.Path}({span.StartLinePosition.Line + 1}): {ConfigBasePackageId} {version} is referenced, " +
+                             $"but MdLive runs with {ConfigBaseVersion}. The script is compiled against {ConfigBaseVersion}, " +
+                             "your editor may show a different API");
             }
         }
 

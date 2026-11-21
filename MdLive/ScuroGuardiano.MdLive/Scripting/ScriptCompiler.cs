@@ -270,6 +270,17 @@ internal sealed class ScriptCompiler
                 return [pe];
             }
 
+            // #r "nuget: ScuroGuardiano.MdLive.ConfigBase, x.y.z" to ConfigBase z serwera, nic nie jest pobierane.
+            // Inne paczki odrzuca już ScriptBundle, tu po prostu ich nie ma.
+            if (ScriptBundle.TryParseNuGetReference(reference, out var packageId, out _))
+            {
+                return ScriptBundle.IsConfigBasePackage(packageId)
+                       && baseReferences.ByName.TryGetValue(ScriptBundle.ConfigBasePackageId, out var configBase)
+                       && configBase is PortableExecutableReference configBaseReference
+                    ? [configBaseReference]
+                    : [];
+            }
+
             var full = ScriptBundle.ResolvePath(reference, baseFilePath, bundle.ConfigDirectory);
             var file = bundle.FindFile(full, ScriptFileKind.Reference);
 
