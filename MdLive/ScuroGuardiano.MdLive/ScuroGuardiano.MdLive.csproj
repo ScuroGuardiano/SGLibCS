@@ -24,6 +24,12 @@
 
     <ItemGroup>
         <PackageReference Include="StarFederation.Datastar" Version="1.4.0" />
+        <!-- Kompilacja .mdlive/config.csx. Samo CSharp, bez .Scripting, patrz Scripting/ScriptCompiler.cs -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="ScuroGuardiano.MdLive.Tests" />
     </ItemGroup>
 
     <ItemGroup>
@@ -33,5 +39,15 @@
     <ItemGroup>
       <ProjectReference Include="..\ScuroGuardiano.MdLive.ConfigBase\ScuroGuardiano.MdLive.ConfigBase.csproj" />
     </ItemGroup>
+
+    <!--
+        Roslyn przynosi tłumaczenia komunikatów na 13 języków, diagnostyki wystarczą po angielsku.
+        Nie SatelliteResourceLanguages, bo to wycięłoby też tłumaczenia Humanizera, z których korzystają konfiguratory.
+    -->
+    <Target Name="RemoveRoslynSatelliteAssemblies" AfterTargets="ResolvePackageAssets">
+        <ItemGroup>
+            <ResourceCopyLocalItems Remove="@(ResourceCopyLocalItems)" Condition="$([System.String]::Copy('%(ResourceCopyLocalItems.NuGetPackageId)').StartsWith('Microsoft.CodeAnalysis'))" />
+        </ItemGroup>
+    </Target>
 
 </Project>

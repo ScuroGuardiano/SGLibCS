@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="ScuroGuardiano.MdLive.ConfigBase/ScuroGuardiano.MdLive.ConfigBase.csproj" />
   <Project Path="ScuroGuardiano.MdLive/ScuroGuardiano.MdLive.csproj" />
+  <Project Path="ScuroGuardiano.MdLive.Tests/ScuroGuardiano.MdLive.Tests.csproj" />
 </Solution>

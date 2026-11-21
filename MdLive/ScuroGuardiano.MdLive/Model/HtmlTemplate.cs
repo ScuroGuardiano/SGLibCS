@@ -77,6 +77,7 @@ internal sealed class HtmlTemplate
         const string bodyElements =
             """
               <div id="__japierdole" data-ignore-morph style="display: none;" data-init="@get('/preview/sse')"></div>
+              <%__mdlive_notice%>
 
             """;
 
