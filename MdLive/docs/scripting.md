@@ -262,9 +262,11 @@ public class MyConfig(ILogger<MdLiveConfigurator> logger) : MdLiveConfigurator(l
 - The explicit `using` directives are harmless for MdLive, they repeat its defaults.
 - `mdlive --version` prints the ConfigBase version to put in the reference.
 
-### OmniSharp
+### OmniSharp (works)
 
-OmniSharp resolves `#r "nuget:"` in `.csx` only with script NuGet references enabled, in `omnisharp.json` in
+Tested with OmniSharp 2.0.0 in Neovim 0.12: hover with the XML docs from the package, completion of
+Markdig types, and diagnostics without false errors. Without the setting below the same file is full of
+`CS0246` errors. OmniSharp resolves `#r "nuget:"` in `.csx` only with script NuGet references enabled, in `omnisharp.json` in
 the directory OmniSharp is started in (the project root), or globally in `~/.omnisharp/omnisharp.json`
 ([Configuration Options](https://github.com/OmniSharp/omnisharp-roslyn/wiki/Configuration-Options)):
 
@@ -278,4 +280,25 @@ the directory OmniSharp is started in (the project root), or globally in `~/.omn
 }
 ```
 
+Neovim gives `.csx` the `cs` filetype. With nvim-lspconfig `vim.lsp.enable("omnisharp")` is enough, without it
+(Neovim 0.11+):
+
+```lua
+vim.lsp.config("omnisharp", {
+  cmd = { "OmniSharp", "-z", "--hostPID", tostring(vim.fn.getpid()), "--encoding", "utf-8", "--languageserver" },
+  filetypes = { "cs" },
+  root_markers = { "omnisharp.json", ".git" },
+})
+vim.lsp.enable("omnisharp")
+```
+
 Restoring is done by the editor, with its own NuGet configuration. That's outside of MdLive and its trust store.
+
+The package has to be on a NuGet feed the editor can reach. The first version on nuget.org is the one released
+together with this feature.
+
+### Roslyn language server (doesn't work)
+
+`roslyn-language-server` 5.13 (the server roslyn.nvim runs) opens `.cs` files as file-based programs, but
+loads no project for `.csx`: no hover, completion or diagnostics at all, even with `languageId` `csharp`. Use
+OmniSharp for `config.csx`, it can run next to Roslyn LS, which keeps handling regular projects.
