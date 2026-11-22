@@ -64,14 +64,17 @@ file the config consists of with its SHA-256 and offers:
 
 Editing any of the files makes the config untrusted again, and the preview falls back to the default.
 
+In directories only you write to, such as your notes, skip this with the `trusted_dirs` option, e.g.
+`trusted_dirs = { "~/notes" }`. A config under one of them runs right away and `:MdLiveTrust` says so.
+Don't list a directory you clone other people's repositories into. Needs an `mdlive` with `serve --trust`,
+older versions ignore the option.
 ## Options
 
 Defaults:
 
 ```lua
 require("mdlive").setup({
-  -- Command starting the server. Add "--trust", vim.fn.expand("~/notes") to run config.csx
-  -- in directories only you write to without :MdLiveTrust, see docs/scripting.md
+  -- Command starting the server
   cmd = { "mdlive", "serve" },
   -- Minimal interval between updates while typing
   throttle_ms = 100,
@@ -81,6 +84,9 @@ require("mdlive").setup({
   filetypes = { "markdown" },
   -- How many lines of server stderr to keep for :MdLiveLog
   log_lines = 500,
+  -- Directories where .mdlive/config.csx runs without :MdLiveTrust (passed as mdlive serve --trust).
+  -- Only ones nobody else writes to. ~ and $VARIABLES are expanded, missing directories skipped.
+  trusted_dirs = {},
 })
 ```
 

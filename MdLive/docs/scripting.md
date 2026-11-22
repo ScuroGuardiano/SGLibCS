@@ -120,11 +120,12 @@ soon as you open one of their Markdown files. MdLive logs a warning when a `--tr
 whole home directory. The option is deliberately command line only: as a configuration key it could also come
 from an environment variable.
 
-With the Neovim plugin, put it in `cmd`. Neovim starts the server without a shell, so expand `~` yourself:
+With the Neovim plugin, list the directories in `trusted_dirs`. `~` and `$VARIABLES` are expanded and
+directories that don't exist are skipped with a warning, so the same config works on machines without them:
 
 ```lua
 require("mdlive").setup({
-  cmd = { "mdlive", "serve", "--trust", vim.fn.expand("~/notes") },
+  trusted_dirs = { "~/notes", "~/blog" },
 })
 ```
 

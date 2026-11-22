@@ -18,6 +18,9 @@ local config = {
   filetypes = { "markdown" },
   -- Ile linii stderr serwera trzymać dla :MdLiveLog
   log_lines = 500,
+  -- Katalogi, w których .mdlive/config.csx działa bez :MdLiveTrust (mdlive serve --trust).
+  -- Tylko takie, do których nikt poza Tobą nie pisze. ~ i $ZMIENNE są rozwijane.
+  trusted_dirs = {},
 }
 
 local state = {
@@ -195,6 +198,42 @@ local function on_exit(_, code)
   end
 end
 
+-- Prawdziwe ścieżki katalogów z trusted_dirs; nieistniejące są pomijane z ostrzeżeniem,
+-- bo ten sam config może trafić na maszynę, na której takiego katalogu nie ma
+local function resolve_trusted_dirs(warn)
+  local resolved, missing = {}, {}
+  for _, dir in ipairs(config.trusted_dirs) do
+    local real = vim.uv.fs_realpath(vim.fn.expand(dir))
+    if real and vim.fn.isdirectory(real) == 1 then
+      table.insert(resolved, real)
+    else
+      table.insert(missing, dir)
+    end
+  end
+  if warn and #missing > 0 then
+    notify("trusted_dirs: skipping missing " .. table.concat(missing, ", "), vim.log.levels.WARN)
+  end
+  return resolved
+end
+
+local function trust_args()
+  local args = {}
+  for _, dir in ipairs(resolve_trusted_dirs(true)) do
+    vim.list_extend(args, { "--trust", dir })
+  end
+  return args
+end
+
+-- Katalog z trusted_dirs obejmujący path (prawdziwą ścieżkę), z granicą na separatorze:
+-- ~/notes nie obejmuje ~/notes-old
+local function trusted_dir_covering(path)
+  for _, dir in ipairs(resolve_trusted_dirs(false)) do
+    if path == dir or vim.startswith(path, dir:gsub("/$", "") .. "/") then
+      return dir
+    end
+  end
+end
+
 local function create_autocmds()
   state.augroup = vim.api.nvim_create_augroup("MdLive", { clear = true })
 
@@ -276,7 +315,8 @@ function M.start()
 
   state.log = {}
   state.cwd = vim.fn.getcwd()
-  local job = vim.fn.jobstart(config.cmd, {
+  local cmd = vim.list_extend(vim.deepcopy(config.cmd), trust_args())
+  local job = vim.fn.jobstart(cmd, {
     cwd = state.cwd,
     on_stdout = on_stdout,
     on_stderr = on_stderr,
@@ -354,6 +394,12 @@ function M.trust()
 
     if info.status == "trusted" then
       notify(info.directory .. " is already trusted")
+      return
+    end
+
+    local covering = trusted_dir_covering(info.directory)
+    if covering then
+      notify(info.directory .. " is trusted by trusted_dirs (" .. covering .. "), nothing to do")
       return
     end
 
