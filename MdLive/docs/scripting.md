@@ -86,7 +86,8 @@ installed SDK, MdLive needs only the runtime.
 | `#load "lib/helpers.csx"`    | Includes another script, path relative to the file with the directive.          |
 | `#r "lib/Some.Library.dll"`  | References an assembly, path relative to the file with the directive.           |
 | `#r "System.Net.Http"`       | By name, only assemblies MdLive already references (accepted for compatibility). |
-| `#r "nuget: Package, 1.0.0"` | **Not supported**, see [NuGet packages](#nuget-packages).                        |
+| `#r "nuget: ScuroGuardiano.MdLive.ConfigBase, x.y.z"` | For IntelliSense, maps to the bundled ConfigBase, see [Editor support](#editor-support). |
+| `#r "nuget: Package, 1.0.0"` | Any other package: **not supported**, see [NuGet packages](#nuget-packages). |
 
 Rules, all checked before anything is compiled:
 
@@ -226,7 +227,7 @@ compile errors are shown escaped, `--revoke` works.
 
 ## NuGet packages
 
-Not supported yet. Options, from the safest:
+Not supported yet, apart from `ScuroGuardiano.MdLive.ConfigBase`, which isn't downloaded at all. Options, from the safest:
 
 1. Copy the DLLs into `.mdlive/` and `#r` them (works now, they're hashed like any other file).
 2. Download with the NuGet client libraries (`NuGet.Protocol`), without MSBuild, require an exact version and
@@ -235,7 +236,69 @@ Not supported yet. Options, from the safest:
 
 ## Editor support
 
-Editors don't know about `ScuroGuardiano.MdLive.ConfigBase`, so IntelliSense in `config.csx` doesn't work out
-of the box. A possible follow-up: publish `ScuroGuardiano.MdLive.ConfigBase` to NuGet and accept
-`#r "nuget: ScuroGuardiano.MdLive.ConfigBase, <version>"`, mapped to the bundled assembly. Tools that understand
-dotnet-script style references, like OmniSharp, would then resolve it.
+The defaults MdLive adds (imported namespaces, referenced assemblies) are invisible to editors. To get
+IntelliSense, write the script so that it stands on its own:
+
+```csharp
+#r "nuget: ScuroGuardiano.MdLive.ConfigBase, 0.2.0"
+
+using Markdig;
+using Markdig.Syntax;
+using Microsoft.Extensions.Logging;
+using ScuroGuardiano.MdLive.ConfigBase;
+
+public class MyConfig(ILogger<MdLiveConfigurator> logger) : MdLiveConfigurator(logger)
+{
+}
+```
+
+- [`ScuroGuardiano.MdLive.ConfigBase`](https://www.nuget.org/packages/ScuroGuardiano.MdLive.ConfigBase) is
+  published with the same version as the `mdlive` tool. Its dependencies are Markdig, Markdown.ColorCode and
+  Humanizer, so the editor sees them too, and it includes the XML docs of `MdLiveConfigurator`.
+- **MdLive doesn't download it.** The reference maps to the ConfigBase MdLive is built with, so it doesn't
+  weaken the trust model: the script is still compiled only against what's listed in
+  [What the script can use](#what-the-script-can-use). A different version only logs a warning, because the
+  script is compiled against the bundled one anyway.
+- The explicit `using` directives are harmless for MdLive, they repeat its defaults.
+- `mdlive --version` prints the ConfigBase version to put in the reference.
+
+### OmniSharp (works)
+
+Tested with OmniSharp 2.0.0 in Neovim 0.12: hover with the XML docs from the package, completion of
+Markdig types, and diagnostics without false errors. Without the setting below the same file is full of
+`CS0246` errors. OmniSharp resolves `#r "nuget:"` in `.csx` only with script NuGet references enabled, in `omnisharp.json` in
+the directory OmniSharp is started in (the project root), or globally in `~/.omnisharp/omnisharp.json`
+([Configuration Options](https://github.com/OmniSharp/omnisharp-roslyn/wiki/Configuration-Options)):
+
+```json
+{
+  "script": {
+    "enabled": true,
+    "defaultTargetFramework": "net11.0",
+    "enableScriptNuGetReferences": true
+  }
+}
+```
+
+Neovim gives `.csx` the `cs` filetype. With nvim-lspconfig `vim.lsp.enable("omnisharp")` is enough, without it
+(Neovim 0.11+):
+
+```lua
+vim.lsp.config("omnisharp", {
+  cmd = { "OmniSharp", "-z", "--hostPID", tostring(vim.fn.getpid()), "--encoding", "utf-8", "--languageserver" },
+  filetypes = { "cs" },
+  root_markers = { "omnisharp.json", ".git" },
+})
+vim.lsp.enable("omnisharp")
+```
+
+Restoring is done by the editor, with its own NuGet configuration. That's outside of MdLive and its trust store.
+
+The package has to be on a NuGet feed the editor can reach. The first version on nuget.org is the one released
+together with this feature.
+
+### Roslyn language server (doesn't work)
+
+`roslyn-language-server` 5.13 (the server roslyn.nvim runs) opens `.cs` files as file-based programs, but
+loads no project for `.csx`: no hover, completion or diagnostics at all, even with `languageId` `csharp`. Use
+OmniSharp for `config.csx`, it can run next to Roslyn LS, which keeps handling regular projects.

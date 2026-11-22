@@ -45,6 +45,7 @@ jobs:
 
           case "$package" in
             ScuroGuardiano.MdLive) project="MdLive/ScuroGuardiano.MdLive/ScuroGuardiano.MdLive.csproj" ;;
+            ScuroGuardiano.MdLive.ConfigBase) project="MdLive/ScuroGuardiano.MdLive.ConfigBase/ScuroGuardiano.MdLive.ConfigBase.csproj" ;;
             *)
               echo "::notice::Publishing of '$package' is not configured, nothing to publish"
               echo "publish=false" >> "$GITHUB_OUTPUT"

@@ -106,6 +106,11 @@ internal sealed class ConfiguratorProvider : IDisposable
 
     private async Task<(ActiveConfigurator, ScriptLoadContext)> LoadScript(ScriptBundle bundle)
     {
+        foreach (var warning in bundle.Warnings)
+        {
+            _logger.LogWarning("{Warning}", warning);
+        }
+
         var compiled = _compiler.Compile(bundle);
         foreach (var warning in compiled.Warnings)
         {
