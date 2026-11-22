@@ -1,3 +1,4 @@
+using ScuroGuardiano.MdLive.Commands;
 using ScuroGuardiano.MdLive.Scripting;
 
 namespace ScuroGuardiano.MdLive.Tests;
