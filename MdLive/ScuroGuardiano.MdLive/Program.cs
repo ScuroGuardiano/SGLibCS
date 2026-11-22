@@ -38,13 +38,25 @@ switch (args)
         return 1;
 }
 
-// Wszystko poniżej to "mdlive serve". Reszta argumentów idzie do konfiguracji, np. --AllowedHosts=...
+// Wszystko poniżej to "mdlive serve". --trust zabieramy sami, reszta argumentów idzie do konfiguracji,
+// np. --AllowedHosts=...
+var serveArguments = ServeArguments.Parse(args[1..], out var serveErrors);
+if (serveErrors.Count > 0)
+{
+    foreach (var error in serveErrors)
+    {
+        await Console.Error.WriteLineAsync($"mdlive serve: {error}");
+    }
+
+    return 1;
+}
+
 // ContentRoot to katalog toola, nie bieżący. Domyślnie to cwd, czyli katalog otwartego projektu, a wtedy
 // appsettings.json z obcego repo mógłby np. przestawić Kestrela na 0.0.0.0 (Kestrel:Endpoints wygrywa z UseUrls)
 // albo wyłączyć filtrowanie hosta. Pliki .mdlive i dokumenty i tak są szukane względem cwd, nie ContentRoot.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
-    Args = args[1..],
+    Args = serveArguments.ConfigurationArgs,
     ContentRootPath = AppContext.BaseDirectory
 });
 
@@ -61,6 +73,7 @@ builder.Services.AddSingleton<DocumentContentChannel>();
 builder.Services.AddSingleton<PreviewHub>();
 builder.Services.AddSingleton<MdLiveConfigurator>();
 builder.Services.AddSingleton(TrustStore.CreateDefault());
+builder.Services.AddSingleton(new TrustedDirectories(serveArguments.TrustedDirectories));
 builder.Services.AddSingleton<ScriptCompiler>();
 builder.Services.AddSingleton<ConfiguratorProvider>();
 builder.Services.AddHostedService<StdinListener>();
@@ -124,6 +137,17 @@ builder.Services.AddOptions<HostFilteringOptions>()
     });
 
 var app = builder.Build();
+
+foreach (var trusted in serveArguments.TrustedDirectories)
+{
+    app.Logger.LogInformation("config.csx in {Directory} and below is trusted by --trust", trusted);
+}
+
+foreach (var trusted in serveArguments.TooBroad())
+{
+    app.Logger.LogWarning("--trust {Directory} covers your whole home directory, every repository cloned there will run " +
+                          "its .mdlive/config.csx without asking", trusted);
+}
 
 if (app.Services.GetRequiredService<IOptions<HostFilteringOptions>>().Value.AllowedHosts.Contains("*"))
 {
@@ -279,6 +303,8 @@ static void PrintUsage(TextWriter writer)
           serve    Start the preview server on a random port on 127.0.0.1 and print
                    {"port":<port>,"token":"<access token>"} to stdout; open http://127.0.0.1:<port>/#<token>.
                    Reads editor messages from stdin, exits when stdin is closed.
+                   --trust <dir>  Run .mdlive/config.csx from <dir> and its subdirectories without
+                                  `mdlive trust`. Only for directories nobody else writes to. Repeatable.
           trust    Review and trust .mdlive/config.csx with everything it loads. Only a trusted
                    config script is run, any change to it has to be trusted again.
                    --show       Only list the files, their hashes and the trust status.

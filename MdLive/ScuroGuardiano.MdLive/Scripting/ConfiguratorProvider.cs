@@ -30,6 +30,7 @@ internal sealed class ConfiguratorProvider : IDisposable
     private readonly ScriptCompiler _compiler;
     private readonly ILogger<ConfiguratorProvider> _logger;
     private readonly string? _workingDirectory;
+    private readonly TrustedDirectories _trustedDirectories;
 
     private string? _currentKey;
     private ActiveConfigurator? _current;
@@ -41,7 +42,8 @@ internal sealed class ConfiguratorProvider : IDisposable
         TrustStore trustStore,
         ScriptCompiler compiler,
         ILogger<ConfiguratorProvider> logger,
-        string? workingDirectory = null)
+        string? workingDirectory = null,
+        TrustedDirectories? trustedDirectories = null)
     {
         _defaultConfigurator = defaultConfigurator;
         _services = services;
@@ -49,6 +51,7 @@ internal sealed class ConfiguratorProvider : IDisposable
         _compiler = compiler;
         _logger = logger;
         _workingDirectory = workingDirectory;
+        _trustedDirectories = trustedDirectories ?? TrustedDirectories.None;
     }
 
     /// <summary>Weak reference to the load context of the script that was replaced last, for tests.</summary>
@@ -61,7 +64,11 @@ internal sealed class ConfiguratorProvider : IDisposable
         var configDirectory = ConfigDirectoryLocator.Find(workingDirectory) ?? ConfigDirectoryLocator.Default(workingDirectory);
 
         var bundle = ScriptBundle.Read(configDirectory, ScriptCompiler.IsKnownAssemblyName);
-        var trust = bundle is null ? null : _trustStore.GetState(bundle);
+        // --trust omija tylko trust store; reszta łańcucha (odczyt, hash, kompilacja z bajtów) bez zmian
+        var trustedBy = bundle is null ? null : _trustedDirectories.FindCovering(bundle.ConfigDirectory);
+        var trust = bundle is null ? null
+            : trustedBy is not null ? new TrustState(TrustStatus.Trusted, null)
+            : _trustStore.GetState(bundle);
         // Katalog w kluczu: domyślny configurator też czyta z niego style i szablon
         var key = bundle is null ? $"{configDirectory}|none" : $"{configDirectory}|{bundle.Hash}:{trust!.Status}";
 
@@ -89,8 +96,8 @@ internal sealed class ConfiguratorProvider : IDisposable
             {
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 (next, context) = await LoadScript(bundle);
-                _logger.LogInformation("Loaded {Path} ({Hash}) in {Elapsed} ms", bundle.Main.FullPath, bundle.Hash[..12],
-                    stopwatch.ElapsedMilliseconds);
+                _logger.LogInformation("Loaded {Path} ({Hash}) in {Elapsed} ms{TrustedBy}", bundle.Main.FullPath, bundle.Hash[..12],
+                    stopwatch.ElapsedMilliseconds, trustedBy is null ? "" : $", trusted by --trust {trustedBy}");
             }
             catch (Exception ex)
             {
