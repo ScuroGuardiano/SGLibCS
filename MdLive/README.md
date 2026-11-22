@@ -63,8 +63,10 @@ See [nvim/README.md](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLiv
 
 ## The `.mdlive` folder
 
-MdLive looks for `.mdlive/` in its working directory, which the Neovim plugin sets to Neovim's
-current directory. Every file is optional and re-read on each render.
+MdLive looks for `.mdlive/` in its working directory (Neovim's current directory with the plugin) and then
+in parent directories, like git looks for `.git`. The nearest one wins, so you can run Neovim from a
+subdirectory of the project. The search doesn't climb into directories writable by everyone, such as `/tmp`,
+where someone else could plant a `.mdlive`. Every file is optional and re-read on each render.
 
 | File            | Used as                                                                     |
 |-----------------|-----------------------------------------------------------------------------|

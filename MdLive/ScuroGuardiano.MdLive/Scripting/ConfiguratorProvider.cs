@@ -20,8 +20,6 @@ internal sealed record ActiveConfigurator(MdLiveConfigurator Configurator, Markd
 /// </summary>
 internal sealed class ConfiguratorProvider : IDisposable
 {
-    public const string DefaultConfigDirectory = ".mdlive";
-
     // Synchronicznej nieskończonej pętli i tak nie przerwiemy (w .NET nie ma Thread.Abort),
     // ale render wraca do domyślnego configu z czytelnym błędem zamiast wisieć w nieskończoność
     internal TimeSpan ScriptTimeout { get; init; } = TimeSpan.FromSeconds(15);
@@ -31,7 +29,7 @@ internal sealed class ConfiguratorProvider : IDisposable
     private readonly TrustStore _trustStore;
     private readonly ScriptCompiler _compiler;
     private readonly ILogger<ConfiguratorProvider> _logger;
-    private readonly string _configDirectory;
+    private readonly string? _workingDirectory;
 
     private string? _currentKey;
     private ActiveConfigurator? _current;
@@ -43,14 +41,14 @@ internal sealed class ConfiguratorProvider : IDisposable
         TrustStore trustStore,
         ScriptCompiler compiler,
         ILogger<ConfiguratorProvider> logger,
-        string configDirectory = DefaultConfigDirectory)
+        string? workingDirectory = null)
     {
         _defaultConfigurator = defaultConfigurator;
         _services = services;
         _trustStore = trustStore;
         _compiler = compiler;
         _logger = logger;
-        _configDirectory = configDirectory;
+        _workingDirectory = workingDirectory;
     }
 
     /// <summary>Weak reference to the load context of the script that was replaced last, for tests.</summary>
@@ -58,9 +56,14 @@ internal sealed class ConfiguratorProvider : IDisposable
 
     public async Task<ActiveConfigurator> GetAsync()
     {
-        var bundle = ScriptBundle.Read(_configDirectory, ScriptCompiler.IsKnownAssemblyName);
+        // Szukane przed każdym renderem: .mdlive mógł powstać (mdlive init) albo zniknąć w trakcie pracy
+        var workingDirectory = _workingDirectory ?? Directory.GetCurrentDirectory();
+        var configDirectory = ConfigDirectoryLocator.Find(workingDirectory) ?? ConfigDirectoryLocator.Default(workingDirectory);
+
+        var bundle = ScriptBundle.Read(configDirectory, ScriptCompiler.IsKnownAssemblyName);
         var trust = bundle is null ? null : _trustStore.GetState(bundle);
-        var key = bundle is null ? "none" : $"{bundle.Hash}:{trust!.Status}";
+        // Katalog w kluczu: domyślny configurator też czyta z niego style i szablon
+        var key = bundle is null ? $"{configDirectory}|none" : $"{configDirectory}|{bundle.Hash}:{trust!.Status}";
 
         if (_current is not null && key == _currentKey)
         {
@@ -72,13 +75,13 @@ internal sealed class ConfiguratorProvider : IDisposable
 
         if (bundle is null)
         {
-            next = await CreateDefault(null);
+            next = await CreateDefault(configDirectory, null);
         }
         else if (trust!.Status != TrustStatus.Trusted)
         {
             var notice = DescribeUntrusted(bundle, trust);
             _logger.LogWarning("{Notice}", notice);
-            next = await CreateDefault(notice);
+            next = await CreateDefault(configDirectory, notice);
         }
         else
         {
@@ -96,7 +99,7 @@ internal sealed class ConfiguratorProvider : IDisposable
                     : $"{ScriptBundle.MainFileName} failed: {ex}";
 
                 _logger.LogError("{Notice}", notice);
-                next = await CreateDefault(notice);
+                next = await CreateDefault(configDirectory, notice);
             }
         }
 
@@ -132,6 +135,7 @@ internal sealed class ConfiguratorProvider : IDisposable
 
             var result = await Task.Run(() => factory(new object?[2])).WaitAsync(ScriptTimeout);
             var configurator = CreateConfigurator(result, assembly);
+            configurator.ConfigDirectory = bundle.ConfigDirectory;
             var pipeline = await Task.Run(configurator.CreateMarkdownPipeline).WaitAsync(ScriptTimeout);
 
             return (new ActiveConfigurator(configurator, pipeline, null), context);
@@ -193,8 +197,9 @@ internal sealed class ConfiguratorProvider : IDisposable
              "Review it and run `mdlive trust` (:MdLiveTrust in Neovim)."
     };
 
-    private async Task<ActiveConfigurator> CreateDefault(string? notice)
+    private async Task<ActiveConfigurator> CreateDefault(string configDirectory, string? notice)
     {
+        _defaultConfigurator.ConfigDirectory = configDirectory;
         _defaultPipeline ??= await _defaultConfigurator.CreateMarkdownPipeline();
         return new ActiveConfigurator(_defaultConfigurator, _defaultPipeline, notice);
     }

@@ -66,6 +66,9 @@ The script can:
 
 Top-level statements run once, every time the script is (re)loaded.
 
+`ConfigDirectory` (the `.mdlive` directory that was found, see the [README](https://github.com/ScuroGuardiano/SGLibCS/tree/master/MdLive#the-mdlive-folder))
+is set after the configurator is created, so use it in methods, not in the constructor.
+
 ## What the script can use
 
 Imported in every script: `System`, `System.Collections.Generic`, `System.IO`, `System.Linq`, `System.Text`,
@@ -176,6 +179,7 @@ reflection included. The protection is to not run what the user hasn't approved.
 | Threat                                                         | Mitigation                                                   |
 |----------------------------------------------------------------|--------------------------------------------------------------|
 | Cloned repository with a malicious `config.csx`                | Not trusted, never compiled or run, banner in the preview.   |
+| `.mdlive` planted in a shared parent directory (`/tmp`)          | Searching parents stops below world-writable directories and never looks at a drive root on Windows. Same class of bug as git's [CVE-2022-24765](https://github.blog/engineering/git-security-vulnerability-announced/), which git fixed with ownership checks. |
 | Trusted repository updated by `git pull`                       | Hash changes, trust has to be given again after review.      |
 | Change hidden in a `#load`-ed file or a `#r`-ed DLL            | They're part of the hash.                                    |
 | `#load "../../x.csx"`, absolute paths, symlinks out of `.mdlive` | Rejected by the reader. The compiler only sees bundle files. |

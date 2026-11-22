@@ -146,17 +146,10 @@ internal sealed class ScriptBundle
 
     private static string? ResolveDirectory(string configDirectory)
     {
-        var full = Path.GetFullPath(configDirectory);
-        var info = new DirectoryInfo(full);
-
-        // Sam katalog .mdlive może być symlinkiem (np. do wspólnej konfiguracji), wtedy kluczem zaufania
-        // jest katalog docelowy. W środku symlinków już nie akceptujemy.
-        if (info.LinkTarget is not null && info.ResolveLinkTarget(returnFinalTarget: true) is DirectoryInfo target)
-        {
-            info = target;
-        }
-
-        return info.Exists ? Path.TrimEndingDirectorySeparator(info.FullName) : null;
+        // Symlinki samego .mdlive i katalogów nad nim są rozwiązywane, więc kluczem zaufania jest prawdziwa
+        // ścieżka. W środku .mdlive symlinków już nie akceptujemy (Reader).
+        var real = Paths.GetRealPath(configDirectory);
+        return Directory.Exists(real) ? real : null;
     }
 
     private static bool IsSymlink(string path) => new FileInfo(path).LinkTarget is not null;

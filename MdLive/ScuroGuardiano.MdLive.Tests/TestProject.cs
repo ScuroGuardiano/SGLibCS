@@ -41,7 +41,7 @@ internal sealed class TestProject : IDisposable
 
     public void TrustCurrent() => TrustStore.Trust(ReadRequired());
 
-    public ConfiguratorProvider CreateProvider(TimeSpan? timeout = null)
+    public ConfiguratorProvider CreateProvider(TimeSpan? timeout = null, string? workingDirectory = null)
     {
         var services = new ServiceCollection()
             .AddLogging()
@@ -49,7 +49,7 @@ internal sealed class TestProject : IDisposable
             .BuildServiceProvider();
 
         return new ConfiguratorProvider(services.GetRequiredService<MdLiveConfigurator>(), services, TrustStore,
-            new ScriptCompiler(), NullLogger<ConfiguratorProvider>.Instance, ConfigDirectory)
+            new ScriptCompiler(), NullLogger<ConfiguratorProvider>.Instance, workingDirectory ?? Root)
         {
             ScriptTimeout = timeout ?? TimeSpan.FromSeconds(15)
         };
