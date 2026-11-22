@@ -56,15 +56,17 @@ See [nvim/README.md](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLiv
 | Command                     | Description                                                                   |
 |-----------------------------|-------------------------------------------------------------------------------|
 | `mdlive init [--force]`     | Create `.mdlive/` with default `style.css` and `template.html`. Refuses a non-empty `.mdlive/` unless `--force`, which overwrites only those two files. |
-| `mdlive serve`              | Start the preview server for an editor, see [Editor integration](#editor-integration). |
+| `mdlive serve [--trust <dir>]` | Start the preview server for an editor, see [Editor integration](#editor-integration). `--trust` runs `config.csx` under `<dir>` without `mdlive trust`. |
 | `mdlive trust`              | Review and trust `.mdlive/config.csx`, see [docs/scripting.md](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLive/docs/scripting.md). |
 | `mdlive version`            | Show the version of mdlive and of its ConfigBase, for `#r "nuget: ..."`.      |
 | `mdlive help`               | Show usage.                                                                   |
 
 ## The `.mdlive` folder
 
-MdLive looks for `.mdlive/` in its working directory, which the Neovim plugin sets to Neovim's
-current directory. Every file is optional and re-read on each render.
+MdLive looks for `.mdlive/` in its working directory (Neovim's current directory with the plugin) and then
+in parent directories, like git looks for `.git`. The nearest one wins, so you can run Neovim from a
+subdirectory of the project. The search doesn't climb into directories writable by everyone, such as `/tmp`,
+where someone else could plant a `.mdlive`. Every file is optional and re-read on each render.
 
 | File            | Used as                                                                     |
 |-----------------|-----------------------------------------------------------------------------|

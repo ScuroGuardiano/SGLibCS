@@ -18,7 +18,7 @@ internal static class TrustCommand
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public static async Task<int> RunAsync(IReadOnlyList<string> args, TrustStore? trustStore = null,
-        string configDirectory = ConfiguratorProvider.DefaultConfigDirectory)
+        string? workingDirectory = null)
     {
         var show = false;
         var json = false;
@@ -49,11 +49,16 @@ internal static class TrustCommand
 
         trustStore ??= TrustStore.CreateDefault();
 
-        var bundle = ScriptBundle.Read(configDirectory, ScriptCompiler.IsKnownAssemblyName);
+        // Jak git: .mdlive w bieżącym katalogu albo najbliższym nadrzędnym
+        workingDirectory ??= Directory.GetCurrentDirectory();
+        var configDirectory = ConfigDirectoryLocator.Find(workingDirectory);
+        var bundle = configDirectory is null ? null : ScriptBundle.Read(configDirectory, ScriptCompiler.IsKnownAssemblyName);
         if (bundle is null)
         {
             await Console.Error.WriteLineAsync(
-                $"mdlive trust: no {ScriptBundle.MainFileName} in {Path.GetFullPath(configDirectory)}");
+                configDirectory is null
+                    ? $"mdlive trust: no {ConfigDirectoryLocator.DirectoryName} in {Path.GetFullPath(workingDirectory)} or its parent directories"
+                    : $"mdlive trust: no {ScriptBundle.MainFileName} in {configDirectory}");
             return 1;
         }
 

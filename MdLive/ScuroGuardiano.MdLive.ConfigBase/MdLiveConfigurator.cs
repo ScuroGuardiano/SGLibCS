@@ -37,6 +37,18 @@ public class MdLiveConfigurator
         </html>
         """;
 
+    /// <summary>
+    /// <para>
+    /// Absolute path of the <c>.mdlive</c> directory the default implementations read files from. MdLive looks
+    /// for it in its working directory and then in parent directories, like git does with <c>.git</c>, and sets
+    /// this property before the configurator is used, so read it in methods, not in the constructor.
+    /// </para>
+    /// <para>
+    /// Defaults to <c>.mdlive</c> relative to the current directory.
+    /// </para>
+    /// </summary>
+    public string ConfigDirectory { get; set; } = ".mdlive";
+
     public MdLiveConfigurator(ILogger<MdLiveConfigurator> logger)
     {
         Logger = logger;
@@ -102,7 +114,7 @@ public class MdLiveConfigurator
     /// <returns></returns>
     public virtual async Task<string> ProvideHtmlTemplate(MarkdownDocument markdownDocument)
     {
-        var templatePath = Path.Join(".mdlive", "template.html");
+        var templatePath = Path.Join(ConfigDirectory, "template.html");
         var template = await TryReadAllText(templatePath);
 
         if (template is null)
@@ -132,8 +144,8 @@ public class MdLiveConfigurator
     /// <returns>HTML fragment with styles</returns>
     public virtual async Task<string> ProvideStyles(MarkdownDocument markdownDocument)
     {
-        var styleCssPath = Path.Join(".mdlive", "style.css");
-        var stylesHtmlPath = Path.Join(".mdlive", "styles.html");
+        var styleCssPath = Path.Join(ConfigDirectory, "style.css");
+        var stylesHtmlPath = Path.Join(ConfigDirectory, "styles.html");
         var styleCss = await TryReadAllText(styleCssPath);
         var stylesHtml = await TryReadAllText(stylesHtmlPath);
 
@@ -185,8 +197,8 @@ public class MdLiveConfigurator
     /// <returns>HTML code with scripts</returns>
     public virtual async Task<string> ProvideScripts(MarkdownDocument markdownDocument)
     {
-        var scriptJsPath = Path.Join(".mdlive", "script.js");
-        var scriptsHtmlPath =  Path.Join(".mdlive", "scripts.html");
+        var scriptJsPath = Path.Join(ConfigDirectory, "script.js");
+        var scriptsHtmlPath =  Path.Join(ConfigDirectory, "scripts.html");
         var scriptJs = await TryReadAllText(scriptJsPath);
         var scriptsHtml = await TryReadAllText(scriptsHtmlPath);
 

@@ -66,6 +66,9 @@ The script can:
 
 Top-level statements run once, every time the script is (re)loaded.
 
+`ConfigDirectory` (the `.mdlive` directory that was found, see the [README](https://github.com/ScuroGuardiano/SGLibCS/tree/master/MdLive#the-mdlive-folder))
+is set after the configurator is created, so use it in methods, not in the constructor.
+
 ## What the script can use
 
 Imported in every script: `System`, `System.Collections.Generic`, `System.IO`, `System.Linq`, `System.Text`,
@@ -97,6 +100,33 @@ Rules, all checked before anything is compiled:
 - an assembly can't have the name of one MdLive provides (e.g. a second `Markdig.dll`). Two copies would mean
   two different `MarkdownDocument` types and confusing cast errors,
 - an assembly's own dependencies aren't resolved automatically, `#r` each of them.
+
+## Trusting a whole directory: `mdlive serve --trust <dir>`
+
+For directories only you write to, such as your own notes, approving every change gets tedious:
+
+```sh
+mdlive serve --trust ~/notes --trust ~/blog
+```
+
+A `config.csx` in `.mdlive` anywhere under these directories runs without an entry in the trust store, and
+nothing is written there. Only the trust store lookup is skipped: files still have to be inside `.mdlive`,
+without symlinks, and are compiled from the bytes that were read. Paths are compared after resolving symlinks,
+so a link from a trusted directory to somewhere else doesn't make that place trusted, and `~/notes` doesn't
+cover `~/notes-old`.
+
+Don't point it at a directory where you clone other people's repositories: their `config.csx` would run as
+soon as you open one of their Markdown files. MdLive logs a warning when a `--trust` directory covers your
+whole home directory. The option is deliberately command line only: as a configuration key it could also come
+from an environment variable.
+
+With the Neovim plugin, put it in `cmd`. Neovim starts the server without a shell, so expand `~` yourself:
+
+```lua
+require("mdlive").setup({
+  cmd = { "mdlive", "serve", "--trust", vim.fn.expand("~/notes") },
+})
+```
 
 ## `mdlive trust`
 
@@ -176,6 +206,8 @@ reflection included. The protection is to not run what the user hasn't approved.
 | Threat                                                         | Mitigation                                                   |
 |----------------------------------------------------------------|--------------------------------------------------------------|
 | Cloned repository with a malicious `config.csx`                | Not trusted, never compiled or run, banner in the preview.   |
+| `--trust` covering more than intended                           | Real paths compared component by component (no symlink or `notes-old` tricks), warning when it covers the home directory, command line only. |
+| `.mdlive` planted in a shared parent directory (`/tmp`)          | Searching parents stops below world-writable directories and never looks at a drive root on Windows. Same class of bug as git's [CVE-2022-24765](https://github.blog/engineering/git-security-vulnerability-announced/), which git fixed with ownership checks. |
 | Trusted repository updated by `git pull`                       | Hash changes, trust has to be given again after review.      |
 | Change hidden in a `#load`-ed file or a `#r`-ed DLL            | They're part of the hash.                                    |
 | `#load "../../x.csx"`, absolute paths, symlinks out of `.mdlive` | Rejected by the reader. The compiler only sees bundle files. |

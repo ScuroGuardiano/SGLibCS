@@ -48,7 +48,7 @@ Markdig pipeline and `.mdlive` styles produce. Requires Neovim 0.10+.
 | `:MdLiveTrust` | Review and trust `.mdlive/config.csx`, see below                 |
 
 The server runs with Neovim's current directory as its working directory, so `.mdlive/` is
-looked up there. Switching to another Markdown buffer switches the preview to it.
+looked up there and in its parent directories. Switching to another Markdown buffer switches the preview to it.
 Saving a file in `.mdlive/` re-renders the preview, picking up style and template changes.
 
 ### Trusting `config.csx`
@@ -70,7 +70,8 @@ Defaults:
 
 ```lua
 require("mdlive").setup({
-  -- Command starting the server
+  -- Command starting the server. Add "--trust", vim.fn.expand("~/notes") to run config.csx
+  -- in directories only you write to without :MdLiveTrust, see docs/scripting.md
   cmd = { "mdlive", "serve" },
   -- Minimal interval between updates while typing
   throttle_ms = 100,
