@@ -70,7 +70,8 @@ Defaults:
 
 ```lua
 require("mdlive").setup({
-  -- Command starting the server
+  -- Command starting the server. Add "--trust", vim.fn.expand("~/notes") to run config.csx
+  -- in directories only you write to without :MdLiveTrust, see docs/scripting.md
   cmd = { "mdlive", "serve" },
   -- Minimal interval between updates while typing
   throttle_ms = 100,
