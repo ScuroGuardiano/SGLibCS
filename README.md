@@ -1,5 +1,10 @@
 # MdLive for Neovim
 
+> [!WARNING]
+> **Moved to [ScuroGuardiano/MdLive](https://github.com/ScuroGuardiano/MdLive).** This branch isn't updated
+> anymore. In lazy.nvim replace `"ScuroGuardiano/SGLibCS", branch = "mdlive/nvim", name = "mdlive",` with
+> `"ScuroGuardiano/MdLive",` and run `:Lazy sync`.
+
 Live preview of Markdown rendered by `mdlive serve`, so the browser shows exactly what your
 Markdig pipeline and `.mdlive` styles produce. Requires Neovim 0.10+.
 

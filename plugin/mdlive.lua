@@ -3,7 +3,16 @@ if vim.g.loaded_mdlive then
 end
 vim.g.loaded_mdlive = true
 
-vim.api.nvim_create_user_command("MdLiveStart", function() require("mdlive").start() end,
+-- Ta gałąź nie jest już aktualizowana, plugin żyje w korzeniu ScuroGuardiano/MdLive
+local function moved_notice()
+  vim.notify_once(
+    "MdLive moved to ScuroGuardiano/MdLive, this branch (SGLibCS mdlive/nvim) isn't updated anymore. " ..
+      "In lazy.nvim use { \"ScuroGuardiano/MdLive\" } instead of \"ScuroGuardiano/SGLibCS\", branch = \"mdlive/nvim\".",
+    vim.log.levels.WARN
+  )
+end
+
+vim.api.nvim_create_user_command("MdLiveStart", function() moved_notice(); require("mdlive").start() end,
   { desc = "Start MdLive preview for the current Markdown buffer" })
 vim.api.nvim_create_user_command("MdLiveStop", function() require("mdlive").stop() end,
   { desc = "Stop MdLive preview server" })
