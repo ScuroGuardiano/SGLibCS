@@ -38,8 +38,8 @@ switch (args)
         return 1;
 }
 
-// Wszystko poniżej to "mdlive serve". --trust zabieramy sami, reszta argumentów idzie do konfiguracji,
-// np. --AllowedHosts=...
+// Wszystko poniżej to "mdlive serve". Tylko znane opcje, patrz ServeArguments: --trust zabieramy sami,
+// --AllowedHosts i --Logging:... idą do konfiguracji, wszystko inne to błąd
 var serveArguments = ServeArguments.Parse(args[1..], out var serveErrors);
 if (serveErrors.Count > 0)
 {
@@ -48,7 +48,14 @@ if (serveErrors.Count > 0)
         await Console.Error.WriteLineAsync($"mdlive serve: {error}");
     }
 
+    await Console.Error.WriteLineAsync("Run `mdlive help` for usage.");
     return 1;
+}
+
+if (serveArguments.ShowHelp)
+{
+    PrintUsage(Console.Out);
+    return 0;
 }
 
 // ContentRoot to katalog toola, nie bieżący. Domyślnie to cwd, czyli katalog otwartego projektu, a wtedy
@@ -305,6 +312,9 @@ static void PrintUsage(TextWriter writer)
                    Reads editor messages from stdin, exits when stdin is closed.
                    --trust <dir>  Run .mdlive/config.csx from <dir> and its subdirectories without
                                   `mdlive trust`. Only for directories nobody else writes to. Repeatable.
+                   --AllowedHosts <hosts>  Host headers to accept, ; separated (default: loopback only).
+                   --Logging:<key> <value>  Logging configuration, e.g. --Logging:LogLevel:Default Debug.
+                   Other options are rejected.
           trust    Review and trust .mdlive/config.csx with everything it loads. Only a trusted
                    config script is run, any change to it has to be trusted again.
                    --show       Only list the files, their hashes and the trust status.

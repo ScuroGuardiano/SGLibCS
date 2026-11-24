@@ -56,7 +56,7 @@ See [nvim/README.md](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLiv
 | Command                     | Description                                                                   |
 |-----------------------------|-------------------------------------------------------------------------------|
 | `mdlive init [--force]`     | Create `.mdlive/` with default `style.css` and `template.html`. Refuses a non-empty `.mdlive/` unless `--force`, which overwrites only those two files. |
-| `mdlive serve [--trust <dir>]` | Start the preview server for an editor, see [Editor integration](#editor-integration). `--trust` runs `config.csx` under `<dir>` without `mdlive trust`. |
+| `mdlive serve [--trust <dir>]` | Start the preview server for an editor, see [Editor integration](#editor-integration). `--trust` runs `config.csx` under `<dir>` without `mdlive trust`. Also `--AllowedHosts` and `--Logging:<key>`, any other option is rejected. |
 | `mdlive trust`              | Review and trust `.mdlive/config.csx`, see [docs/scripting.md](https://github.com/ScuroGuardiano/SGLibCS/blob/master/MdLive/docs/scripting.md). |
 | `mdlive version`            | Show the version of mdlive and of its ConfigBase, for `#r "nuget: ..."`.      |
 | `mdlive help`               | Show usage.                                                                   |
