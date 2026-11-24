@@ -18,7 +18,7 @@ Documentation and license for each library are in their respective directories.
 
 ## My Libraries
 - [ScuroGuardiano.Slugify](Slugify) - library for creating slugs.
-- [ScuroGuardiano.MdLive](MdLive) - live Markdown preview rendered with your own Markdig pipeline, driven from an editor (Neovim plugin included).
+- [ScuroGuardiano.MdLive](https://github.com/ScuroGuardiano/MdLive) - live Markdown preview rendered with your own Markdig pipeline, driven from an editor (Neovim plugin included). Moved to its own repository, [ScuroGuardiano/MdLive](https://github.com/ScuroGuardiano/MdLive).
 
 ## License
 Each library has it's license file in it's respective directory.

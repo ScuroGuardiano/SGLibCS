@@ -1,6 +1,6 @@
 # Publishes a single NuGet package when a GitHub release is published.
 #
-# Release tag format: <PackageId>/v<version>, e.g. ScuroGuardiano.MdLive/v0.2.0
+# Release tag format: <PackageId>/v<version>, e.g. ScuroGuardiano.Slugify/v1.0.0
 # Only the package named in the tag is built and pushed, and only if it's listed in the
 # "Resolve package" step below. A release of anything else is ignored.
 #
@@ -44,8 +44,8 @@ jobs:
           version="${BASH_REMATCH[2]}"
 
           case "$package" in
-            ScuroGuardiano.MdLive) project="MdLive/ScuroGuardiano.MdLive/ScuroGuardiano.MdLive.csproj" ;;
-            ScuroGuardiano.MdLive.ConfigBase) project="MdLive/ScuroGuardiano.MdLive.ConfigBase/ScuroGuardiano.MdLive.ConfigBase.csproj" ;;
+            # No packages configured. MdLive moved to ScuroGuardiano/MdLive and is published from there.
+            # To add one: <PackageId>) project="<path to .csproj>" ;;
             *)
               echo "::notice::Publishing of '$package' is not configured, nothing to publish"
               echo "publish=false" >> "$GITHUB_OUTPUT"
